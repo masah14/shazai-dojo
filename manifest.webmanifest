@@ -1,0 +1,13 @@
+{
+  "name": "謝罪道場",
+  "short_name": "謝罪道場",
+  "description": "スマホを傾けて、お題のお辞儀の角度にぴったり合わせるゲーム",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#101b34",
+  "theme_color": "#101b34",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

@@ -1,0 +1,1676 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#101b34">
+<meta name="description" content="スマホを前に倒して、お題のお辞儀の角度にぴったり合わせるゲーム。誤差の小さい人が勝ち。友達とオンライン対戦もできます。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="謝罪道場｜謝罪の角度を極めろ">
+<meta property="og:description" content="スマホを前に倒して、お題のお辞儀の角度にぴったり合わせるゲーム。誤差の小さい人が勝ち。">
+<meta name="twitter:card" content="summary">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest">
+<title>謝罪道場｜謝罪の角度を極めるお辞儀ゲーム</title>
+<style>
+:root{
+  --bg:#101b34; --bg2:#192a52; --paper:#f6f1e7; --ink:#1b2236; --red:#d62839; --gold:#e9b44c; --ok:#3fb68b; --dim:#8f9bb8; --line:rgba(246,241,231,.16);
+  --serif:"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP","Source Han Serif JP",serif;
+  --sans:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI","Noto Sans JP",system-ui,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--paper);font-family:var(--sans);overscroll-behavior:none}
+body{touch-action:manipulation;-webkit-user-select:none;user-select:none;font-size:16px;line-height:1.5}
+button,input{font:inherit;color:inherit}
+[hidden]{display:none!important}
+#app{max-width:480px;margin:0 auto;height:100vh;height:100dvh;position:relative;overflow:hidden;background:radial-gradient(120% 70% at 50% 0%,var(--bg2) 0%,var(--bg) 62%)}
+.screen{position:absolute;inset:0;padding:max(18px,env(safe-area-inset-top)) 20px max(18px,env(safe-area-inset-bottom));display:none;flex-direction:column;gap:14px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.screen.on{display:flex}
+
+/* buttons */
+.btn{appearance:none;border:0;border-radius:14px;padding:15px 18px;font-weight:700;font-size:17px;cursor:pointer;text-align:center;transition:transform .08s,opacity .2s}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.4;pointer-events:none}
+.btn.primary{background:var(--red);color:#fff}
+.btn.paper{background:var(--paper);color:var(--ink)}
+.btn.ghost{background:transparent;border:1.5px solid var(--line);color:var(--paper)}
+.btn.small{padding:10px 14px;font-size:14px;border-radius:10px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.icon-btn{appearance:none;background:rgba(246,241,231,.08);border:0;width:40px;height:40px;border-radius:50%;font-size:18px;cursor:pointer;flex:none}
+.back{align-self:flex-start;background:none;border:0;color:var(--dim);font-size:15px;padding:6px 0;cursor:pointer}
+h2{font-family:var(--serif);font-size:26px;margin:0;letter-spacing:.06em}
+.lead{color:var(--dim);margin:0;text-align:center}
+.field{display:flex;align-items:center;gap:10px;background:rgba(246,241,231,.07);border-radius:12px;padding:6px 14px}
+.field span{color:var(--dim);font-size:14px;flex:none}
+.field input{flex:1;min-width:0;background:none;border:0;outline:0;padding:8px 0;font-size:17px;-webkit-user-select:text;user-select:text}
+
+/* menu */
+a.btn{display:block;text-decoration:none}
+.row2 .btn.small{font-size:13px;padding:10px 4px}
+.btn small{display:block;font-weight:400;font-size:12px;opacity:.78;margin-top:2px;letter-spacing:.02em}
+.btn.big{padding:19px 18px;font-size:20px;letter-spacing:.12em;box-shadow:0 5px 0 #8f1a26}
+.btn.big:active{transform:translateY(3px);box-shadow:0 2px 0 #8f1a26}
+/* 道場の入口（TOP）と、稽古場（モード選択）の、しっくい壁の帯。左右の柱と、下の長押つき */
+.hero,.band{position:relative;flex:none;margin:calc(-1 * max(18px,env(safe-area-inset-top))) -20px 0;padding:max(18px,env(safe-area-inset-top)) 20px 0;background:#f6f2e8;border-bottom:8px solid #8e5128;box-shadow:0 6px 0 rgba(0,0,0,.28)}
+.hero::before,.hero::after,.band::before,.band::after{content:"";position:absolute;top:0;bottom:0;width:12px;background:#8b4a1f;box-shadow:inset 2px 0 0 #a8622d}
+.hero::before,.band::before{left:0}
+.hero::after,.band::after{right:0}
+.hero svg,.band svg{width:100%;max-height:210px;display:block}
+.band .back{color:#6b4423;position:relative;z-index:1}
+.title{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+h2.plaque{align-self:center;background:#6e4426;color:#f6f1e7;border:3px solid #4a2b17;border-radius:10px;padding:6px 28px;box-shadow:0 4px 0 #33200f,inset 0 0 0 2px rgba(255,255,255,.08);text-shadow:0 1px 0 rgba(0,0,0,.4);font-size:22px}
+/* 木の壁（TOP、オンライン、設定、結果）と、畳（モード選択） */
+.wood{--dim:#dcc9a3;--line:rgba(246,241,231,.28);background-color:#6e4426;background-attachment:local;background-image:linear-gradient(90deg,#8b4a1f 0 12px,transparent 12px calc(100% - 12px),#8b4a1f calc(100% - 12px)),repeating-linear-gradient(90deg,transparent 0 13px,rgba(0,0,0,.3) 13px 15px),linear-gradient(rgba(255,255,255,.05),rgba(0,0,0,.22))}
+.wood .field,.wood .switch,.wood .plist li,.wood .tips,.wood .log,.wood .fi-rank{background:rgba(0,0,0,.28)}
+.wood .rank li:not(:first-child){background:rgba(0,0,0,.28)}
+#s-solo{background-color:#a9c776;background-attachment:local;background-image:linear-gradient(90deg,#8b4a1f 0 12px,transparent 12px calc(100% - 12px),#8b4a1f calc(100% - 12px)),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Crect width='260' height='260' fill='%23a9c776'/%3E%3Cpath d='M0 0H260M0 130H260M0 0V130M130 130V260' stroke='%236f9650' stroke-width='3' fill='none'/%3E%3C/svg%3E");background-size:100% 100%,260px 260px}
+.menu-btns{display:flex;flex-direction:column;gap:12px;margin-top:6px}
+.tips{background:rgba(246,241,231,.06);border-radius:14px;padding:14px 16px;margin-top:10px}
+.tips h3{margin:0 0 6px;font-family:var(--serif);font-size:16px;letter-spacing:.05em}
+.tips p{margin:0;color:var(--dim);font-size:13px;line-height:1.7}
+.ad-slot{flex:none;margin-top:28px;text-align:center;overflow:hidden;min-height:100px}
+.ad-slot small{display:block;color:var(--dim);font-size:11px;margin-bottom:2px}
+.foot{text-align:center;padding:6px 0 4px;font-size:12px}
+.foot a{color:var(--dim)}
+
+/* figure */
+svg .ground{stroke:var(--line);stroke-width:2}
+svg .leg{fill:#2b3a63}
+svg .shoe{fill:#0b1124}
+svg .suit{fill:#223a73}
+svg .arm{fill:#2f4e99}
+svg .shirt{fill:var(--paper)}
+svg .tie{fill:var(--red)}
+svg .skin{fill:#f1c9a5}
+svg .hair{fill:#2b2433;stroke:#4d405c;stroke-width:1;stroke-linejoin:round}
+svg .ghost .halo *{fill:none;stroke:#fff;stroke-width:8;stroke-linejoin:round;opacity:.92}
+svg .ghost .line *{fill:rgba(224,36,94,.26);stroke:#e0245e;stroke-width:3.2;stroke-linejoin:round}
+svg .tarc-halo{fill:none;stroke:#fff;stroke-width:9;stroke-linecap:round;opacity:.9}
+svg .tarc{fill:none;stroke:#e0245e;stroke-width:4.2;stroke-linecap:round}
+.lantern{transform-box:view-box;animation:sway 4.4s ease-in-out infinite}
+.lantern.r{animation-delay:-2.2s}
+@keyframes sway{0%,100%{transform:rotate(-2.4deg)}50%{transform:rotate(2.4deg)}}
+.noren{transform-box:view-box;transform-origin:150px 54px;animation:swayn 5.2s ease-in-out infinite}
+@keyframes swayn{0%,100%{transform:skewX(-.8deg)}50%{transform:skewX(.8deg)}}
+
+/* cards */
+.card{background:var(--paper);color:var(--ink);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.card h3{margin:0;font-family:var(--serif);font-size:21px;letter-spacing:.05em}
+.card p{margin:0;font-size:14px;color:#4a536b}
+.card .best{font-size:13px;color:#7a6a3a;font-weight:700}
+.card .prm{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.card .prm>span{font-size:14px;font-weight:700;color:#4a536b}
+.switch{display:flex;align-items:center;gap:12px;background:rgba(246,241,231,.07);border-radius:12px;padding:12px 14px;cursor:pointer}
+.switch input{appearance:none;-webkit-appearance:none;width:46px;height:28px;border-radius:14px;background:#3a4668;position:relative;flex:none;transition:background .2s;outline:0}
+.switch input::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .2s}
+.switch input:checked{background:var(--red)}
+.switch input:checked::after{transform:translateX(18px)}
+.switch b{display:block;font-size:15px}
+.switch small{color:var(--dim);font-size:12.5px}
+
+/* stepper */
+.stepper{display:flex;align-items:center;gap:6px}
+.st-b{appearance:none;border:0;width:42px;height:42px;border-radius:12px;background:var(--ink);color:var(--paper);font-size:15px;cursor:pointer;touch-action:none}
+.st-b:active{background:var(--red)}
+.st-v{min-width:74px;text-align:center;font-variant-numeric:tabular-nums}
+.st-v b{font-size:24px;font-family:var(--serif)}
+.st-v small{font-size:13px;margin-left:2px;opacity:.7}
+.on-dark .st-b{background:rgba(246,241,231,.14);color:var(--paper)}
+.on-dark .st-b:active{background:var(--red)}
+
+/* online */
+.code-in{width:100%;background:rgba(246,241,231,.07);border:0;border-radius:12px;font-size:30px;letter-spacing:.4em;text-align:center;padding:12px;outline:0;text-transform:uppercase;font-family:var(--serif);-webkit-user-select:text;user-select:text}
+.lb-code{font-family:var(--serif);font-size:56px;letter-spacing:.25em;text-align:center;margin:4px 0;padding-left:.25em}
+.plist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.plist li{display:flex;align-items:center;gap:12px;background:rgba(246,241,231,.07);border-radius:12px;padding:10px 14px;font-size:17px}
+.plist li.me{outline:1.5px solid var(--gold)}
+.plist .av{width:34px;height:34px;border-radius:50%;background:var(--paper);color:var(--ink);display:grid;place-items:center;font-weight:700;flex:none}
+.plist em{margin-left:auto;font-style:normal;font-size:12px;color:var(--gold);border:1px solid var(--gold);border-radius:20px;padding:1px 9px}
+.sect{display:flex;flex-direction:column;gap:10px}
+.sect>.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sect .label{color:var(--dim);font-size:14px}
+.note{color:var(--dim);font-size:13px;margin:0}
+
+/* game */
+#s-game{padding-left:16px;padding-right:16px;gap:6px;--gt:#1d3a12;--gp:#6b4423}
+#s-game.th-office{--gt:#f4f7fb;--gp:#33405a}
+#g-quit{background:rgba(30,18,8,.62);color:#fff}
+.g-top{display:flex;align-items:center;gap:10px;position:relative;z-index:3}
+.g-mid{flex:1;text-align:center;min-width:0;background:rgba(246,241,231,.94);color:var(--ink);border-radius:14px;padding:4px 12px;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.g-info{font-weight:700;letter-spacing:.06em}
+.g-sub{font-size:13px;color:#5b4a3a;font-variant-numeric:tabular-nums}
+.g-bar{height:5px;background:rgba(27,34,54,.15);border-radius:3px;overflow:hidden;margin-top:4px}
+.g-bar i{display:block;height:100%;width:0;background:var(--red);transition:width .3s}
+.g-timer{width:40px;text-align:right;font-size:14px;font-weight:700;color:var(--gt);text-shadow:0 1px 3px rgba(0,0,0,.25);font-variant-numeric:tabular-nums;position:relative;z-index:3}
+.g-target{align-self:center;text-align:center;margin-top:2px;position:relative;z-index:3;background:rgba(246,241,231,.95);border:2px solid var(--gp);border-radius:16px;padding:6px 28px 6px;box-shadow:0 3px 10px rgba(0,0,0,.2)}
+.chip{display:inline-block;background:var(--red);color:#fff;font-weight:700;font-size:14px;padding:2px 14px;border-radius:20px;letter-spacing:.2em}
+.tnum{font-family:var(--serif);font-size:80px;line-height:1;color:#a3261f;font-variant-numeric:tabular-nums}
+.tnum small{font-size:34px;margin-left:2px}
+.g-stage{position:relative;z-index:1;flex:1;min-height:170px;display:flex;align-items:flex-end}
+.g-stage svg{width:100%;height:100%}
+.g-ok{display:flex;justify-content:center;padding:8px 0 4px;position:relative;z-index:3}
+.g-ok .btn{width:78%;max-width:300px;padding:20px 18px;font-size:26px;letter-spacing:.3em;text-indent:.3em;border-radius:20px;box-shadow:0 6px 0 #8f1a26;transition:transform .06s,box-shadow .06s,opacity .2s}
+.g-ok .btn:active{transform:translateY(4px);box-shadow:0 2px 0 #8f1a26}
+.g-stage svg{overflow:visible}
+.bgs{display:none}
+.g-stage svg.sc-dojo .bgs.dojo,.g-stage svg.sc-office .bgs.office{display:inline}
+.g-stage svg.sc-office .ground{stroke:rgba(30,40,60,.25)}
+.g-stage svg.sc-dojo .ground{stroke:rgba(30,18,8,.4)}
+.g-stage svg.sc-dojo .mq{stroke:#8b7a5c;stroke-width:1.8}
+/* 道場：サラリーマンは、道着（白い道着、黒帯、はだし、鉢巻）になる */
+.dogi,.sg{display:none}
+svg .dg-line{fill:none;stroke:#b8b2a2;stroke-width:2;stroke-linecap:round}
+svg .obi{fill:#1b1b1f}
+svg .hachi{fill:#f6f6f6;stroke:#c9c9c9;stroke-width:1}
+.g-stage svg.sc-dojo .dogi{display:inline}
+.g-stage svg.sc-dojo .pl .suit{fill:#f3f0e8;stroke:#b8b2a2;stroke-width:1.6}
+.g-stage svg.sc-dojo .pl .arm{fill:#e6e2d6;stroke:#b8b2a2;stroke-width:1.2}
+.g-stage svg.sc-dojo .pl .leg{fill:#f1eee6;stroke:#b8b2a2;stroke-width:1.4}
+.g-stage svg.sc-dojo .pl .shoe{fill:#f1c9a5}
+.g-stage svg.sc-dojo .pl .shirt,.g-stage svg.sc-dojo .pl .collar,.g-stage svg.sc-dojo .pl .tie,.g-stage svg.sc-dojo .pl .lapel,.g-stage svg.sc-dojo .pl .lanyard,.g-stage svg.sc-dojo .pl .idcard,.g-stage svg.sc-dojo .pl .idband,.g-stage svg.sc-dojo .pl .bag{display:none}
+/* 道場の先生（練習以外の道場のモードで、お偉いさんの代わりに立つ。表情はお偉いさんと同じ） */
+svg .hakama{fill:#20232c}
+svg .pleat{fill:none;stroke:#3c404c;stroke-width:1.4}
+svg .beard{fill:#eef0f4;stroke:#b9bcc4;stroke-width:1.2}
+.g-stage svg.sensei .cust .sg{display:inline}
+.g-stage svg.sensei .cust .csuit{fill:#f3f0e8;stroke:#b8b2a2;stroke-width:1.6}
+.g-stage svg.sensei .cust .csuit2{fill:#e6e2d6;stroke:#b8b2a2;stroke-width:1.2}
+.g-stage svg.sensei .cust .shirt,.g-stage svg.sensei .cust .collar,.g-stage svg.sensei .cust .ctie,.g-stage svg.sensei .cust .psq,.g-stage svg.sensei .cust .pin,.g-stage svg.sensei .cust .glass{display:none}
+.g-stage svg.sensei .cust .brow{stroke:#8d93a0;stroke-width:4.4}
+.g-stage svg.sensei .cust .chair{stroke:#b9bcc4;stroke-width:1.2}
+.g-stage .torso{transform-box:view-box;transform-origin:120px 148px;transition:transform .8s cubic-bezier(.2,.8,.2,1)}
+.g-stage .torso.snap{transition:none}
+.g-stage svg .ghost,.g-stage svg .tarc,.g-stage svg .tarc-halo{transition:opacity .4s}
+.g-stage svg.hardmode .ghost,.g-stage svg.hardmode .tarc,.g-stage svg.hardmode .tarc-halo{opacity:0}
+svg .bag rect:first-of-type,svg .bag{fill:#2a2f3a}
+svg .collar{fill:#f6f1e7}svg .lapel{fill:none;stroke:#18284f;stroke-width:2;stroke-linecap:round}
+svg .lanyard{fill:none;stroke:#3b82f6;stroke-width:1.6}svg .idcard{fill:#f6f1e7}svg .idband{fill:#3b82f6}
+svg .skin2{fill:#e2b48c}svg .nose{fill:none;stroke:#d9a77e;stroke-width:1.6;stroke-linecap:round}
+svg .sbrow{fill:none;stroke:#171a2b;stroke-width:2;stroke-linecap:round}svg .smouth{fill:none;stroke:#7a4a3a;stroke-width:1.8;stroke-linecap:round}
+svg .csuit{fill:#2d3340}svg .csuit2{fill:#3a4252}svg .chair{fill:#e5e7eb}svg .cskin{fill:#f1c9a5;transition:fill .3s}svg .cust .leg{fill:#262b36}
+svg .ctie{fill:#c9a227}svg .psq{fill:#f6f1e7}svg .pin{fill:#e9b44c}
+.cust .brow{fill:none;stroke:#3b3b44;stroke-width:3.2;stroke-linecap:round}
+.cust .mouth{fill:none;stroke:#2a2020;stroke-width:2.4;stroke-linecap:round}
+.cust .mouthfill{fill:#6b1f24}
+.cust .teeth{fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round}
+.cust .glass{fill:rgba(255,255,255,.14);stroke:#3a3f4a;stroke-width:1.7}
+.cust .stache{fill:#d8dbe0}
+.cust .eye{fill:#2a2020}
+.cust .face,.cust .vein,.cust .blush{display:none}
+.cust .vein{stroke:var(--red);stroke-width:3;stroke-linecap:round;fill:none}
+.cust .blush{fill:#f08a8a;opacity:.5}
+.cust[data-mood=wait] .f-wait,.cust[data-mood=happy] .f-happy,.cust[data-mood=delight] .f-delight,.cust[data-mood=angry] .f-angry,.cust[data-mood=furious] .f-furious{display:inline}
+.cust[data-mood=angry] .vein,.cust[data-mood=furious] .vein,.cust[data-mood=happy] .blush,.cust[data-mood=delight] .blush{display:inline}
+.cust[data-mood=angry] .cskin{fill:#ef9b84}
+.cust[data-mood=furious] .cskin{fill:#e0624f}
+.cust{transform-box:fill-box;transform-origin:50% 100%}
+.mannequin{display:none;transform-box:fill-box;transform-origin:50% 100%}
+svg.practice .mannequin{display:inline}
+svg.practice .cust{display:none}
+svg .mq{fill:#e6dcc9;stroke:#bba98c;stroke-width:1.4}
+svg .mqs{fill:none;stroke:#bba98c;stroke-width:1.4;stroke-linecap:round}
+svg .mqbase{fill:#2d3340}
+.mannequin.wob{animation:wob .6s ease-out}
+@keyframes wob{0%,100%{transform:none}25%{transform:rotate(-3deg)}55%{transform:rotate(2.5deg)}80%{transform:rotate(-1deg)}}
+.cust.hop{animation:hop .55s ease-out}
+.cust.fume{animation:fume .5s linear}
+.cust.rage{animation:fume .42s linear 2}
+.cust.jump{animation:hop .6s ease-out 2}
+@keyframes hop{0%,100%{transform:none}35%{transform:translateY(-14px)}65%{transform:none}80%{transform:translateY(-5px)}}
+@keyframes fume{0%,100%{transform:none}15%{transform:translateX(-5px) rotate(-2deg)}35%{transform:translateX(5px) rotate(2deg)}55%{transform:translateX(-4px)}75%{transform:translateX(3px)}}
+.flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:4}
+.flash.go{animation:flash .24s ease-out}
+@keyframes flash{0%{opacity:.38}100%{opacity:0}}
+.g-hint{position:relative;z-index:3;min-height:44px;text-align:center;color:var(--gt);font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.28);font-size:14.5px;padding:0 10px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+#s-game.th-office .g-hint{text-shadow:0 1px 3px rgba(0,0,0,.45)}
+.g-hint u{display:block;font-size:12px;opacity:.7;text-decoration:none}
+.g-players{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;min-height:0;position:relative;z-index:3}
+.g-players span{font-size:12px;border:1px solid rgba(246,241,231,.7);background:rgba(246,241,231,.9);border-radius:20px;padding:1px 10px;color:var(--ink)}
+.g-players span.ok{color:#17724f;border-color:#17724f}
+.slider-wrap{padding:2px 6px 0;position:relative;z-index:3}
+.slider-wrap input{width:100%;accent-color:var(--red);height:32px}
+.slider-wrap small{display:block;text-align:center;color:var(--gt);text-shadow:0 1px 3px rgba(0,0,0,.28);font-size:12px}
+
+/* sheet */
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--paper);color:var(--ink);border-radius:22px 22px 0 0;padding:20px 20px max(20px,env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .28s cubic-bezier(.2,.8,.2,1);box-shadow:0 -10px 40px rgba(0,0,0,.4);z-index:5;display:flex;flex-direction:column;gap:8px;max-height:82%;overflow-y:auto}
+.sheet.on{transform:none}
+.sh-verdict{font-family:var(--serif);font-size:23px;letter-spacing:.04em;padding-right:76px;min-height:56px;display:flex;align-items:center;line-height:1.3}
+.sh-err{font-size:15px;color:#4a536b}
+.sh-err b{font-size:44px;font-family:var(--serif);color:var(--ink);font-variant-numeric:tabular-nums;margin-right:2px}
+.sh-meta{font-size:14px;color:#4a536b;font-variant-numeric:tabular-nums}
+.sh-total{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+.scene{font-size:13px;color:var(--dim);margin-top:2px;min-height:20px;letter-spacing:.06em}
+.stamp{position:absolute;right:16px;top:14px;width:64px;height:64px;border:3px solid #c4152a;border-radius:50%;color:#c4152a;display:grid;place-items:center;font-family:var(--serif);font-weight:700;font-size:17px;line-height:1.1;text-align:center;transform:rotate(-14deg);opacity:.92;animation:stamp .4s cubic-bezier(.2,1.5,.4,1) .12s both;pointer-events:none}
+.stamp::after{content:"";position:absolute;inset:4px;border:1px solid #c4152a;border-radius:50%}
+.stamp.r-S{font-size:19px}
+.stamp.r-D,.stamp.r-E{color:#5a2a8a;border-color:#5a2a8a}
+.stamp.r-D::after,.stamp.r-E::after{border-color:#5a2a8a}
+@keyframes stamp{from{transform:scale(2.6) rotate(-32deg);opacity:0}to{transform:rotate(-14deg) scale(1);opacity:.92}}
+.sh-btn{margin-top:4px}
+.sh-cmp{display:grid;grid-template-columns:repeat(3,1fr);text-align:center;gap:6px;padding:4px 0}
+.sh-cmp small{display:block;color:#7a8296;font-size:12px}
+.sh-cmp b{font-family:var(--serif);font-size:30px;font-variant-numeric:tabular-nums;line-height:1.2}
+.sh-cmp div:last-child b{color:var(--red)}
+.sh-btn .auto{display:block;height:3px;background:rgba(255,255,255,.35);border-radius:2px;margin-top:6px;transform-origin:left;animation:auto 2.6s linear forwards}
+@keyframes auto{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+.tbl{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+.tbl th{color:#7a8296;font-weight:500;text-align:right;padding:3px 6px;font-size:12px}
+.tbl th:nth-child(2),.tbl td:nth-child(2){text-align:left}
+.tbl td{padding:6px;text-align:right;border-top:1px solid rgba(27,34,54,.1)}
+.tbl td:nth-child(2){max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tbl tr.me td{background:rgba(233,180,76,.25);font-weight:700}
+.tbl td.miss{color:#a33}
+
+/* final */
+.fi-big{font-family:var(--serif);font-size:84px;line-height:1;text-align:center;color:var(--gold);font-variant-numeric:tabular-nums}
+.fi-big small{font-size:28px;color:var(--paper);margin-left:6px}
+.fi-title{text-align:center;font-family:var(--serif);font-size:24px;letter-spacing:.08em}
+.fi-new{text-align:center;color:var(--gold);font-weight:700;letter-spacing:.15em}
+.fi-sub{text-align:center;color:var(--dim)}
+.fi-rank{text-align:center;background:rgba(246,241,231,.08);border-radius:14px;padding:12px 14px;margin-top:6px;font-size:15px}
+.fi-rank b{font-family:var(--serif);font-size:30px;color:var(--gold);margin:0 2px}
+.rk-msg{text-align:center;color:var(--dim);padding:26px 8px;line-height:1.8}
+.rk-gap{text-align:center;color:var(--dim);letter-spacing:.4em;line-height:1}
+/* ランキング画面は、全面、会社っぽく（明るい壁と、カーペット） */
+#s-rank{background:linear-gradient(#cfd8e5 0 60%,#a5b2c7 60% 62%,#58677f 62%);color:#1b2236}
+#s-rank .back{color:#4a5873}
+#s-rank h2{color:#1b2236}
+#s-rank .note,#s-rank .rk-msg{color:#33405a}
+#s-rank .rk-gap{color:#33405a}
+#s-rank .rank li{background:rgba(255,255,255,.95);color:#1b2236;box-shadow:0 2px 6px rgba(0,0,0,.14)}
+#s-rank .rank li:first-child{background:#fff3c4}
+#s-rank .rank li.me{outline:2px solid #a3261f}
+#s-rank .btn.ghost{color:#fff;border-color:rgba(255,255,255,.55)}
+.log{display:flex;flex-direction:column;gap:2px;font-size:13.5px;font-variant-numeric:tabular-nums;color:var(--dim);background:rgba(246,241,231,.05);border-radius:12px;padding:10px 14px;max-height:170px;overflow-y:auto}
+.log div{display:flex;justify-content:space-between}
+.rank{display:flex;flex-direction:column;gap:8px}
+.rank li{list-style:none;display:flex;align-items:center;gap:12px;background:rgba(246,241,231,.07);border-radius:14px;padding:12px 14px}
+.rank li.me{outline:1.5px solid var(--gold)}
+.rank li:first-child{background:var(--paper);color:var(--ink)}
+.rank .n{font-family:var(--serif);font-size:26px;width:30px;text-align:center}
+.rank .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:18px}
+.rank .tt{font-variant-numeric:tabular-nums;font-weight:700}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.seg button{appearance:none;border:1.5px solid var(--line);background:none;border-radius:10px;padding:10px 4px;font-size:14px;cursor:pointer}
+.seg button.on{background:var(--paper);color:var(--ink);border-color:var(--paper);font-weight:700}
+.live{font-family:var(--serif);font-size:40px;text-align:center;font-variant-numeric:tabular-nums}
+.cf{position:absolute;left:50%;top:58%;width:8px;height:13px;border-radius:2px;background:var(--c);pointer-events:none;animation:cf .95s ease-out forwards;z-index:2}
+@keyframes cf{from{transform:translate(0,0) rotate(0);opacity:1}to{transform:translate(var(--x),var(--y)) rotate(var(--r));opacity:0}}
+.g-stage.shake{animation:shake .4s}
+@keyframes shake{0%,100%{transform:none}20%{transform:translateX(-9px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(4px)}}
+@media (prefers-reduced-motion:reduce){.lantern,.noren{animation:none}.cf,.flash{display:none}.g-stage.shake,.cust.hop,.cust.fume{animation:none}.sh-btn .auto{animation-duration:0s}}
+
+/* overlays */
+.toast{position:fixed;left:50%;bottom:calc(28px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:#000c;color:#fff;padding:10px 18px;border-radius:24px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:30;max-width:88vw;text-align:center}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.busy{position:fixed;inset:0;background:rgba(16,27,52,.82);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;z-index:25;font-size:16px}
+.busy i{width:36px;height:36px;border:4px solid var(--line);border-top-color:var(--gold);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:20;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal .box{background:var(--paper);color:var(--ink);border-radius:20px;padding:22px;max-width:420px;width:100%;display:flex;flex-direction:column;gap:12px;max-height:90vh;overflow-y:auto}
+.modal ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px;font-size:15px}
+.turn{position:fixed;inset:0;background:var(--bg);z-index:40;display:none;align-items:center;justify-content:center;text-align:center;padding:30px;font-size:18px}
+@media (orientation:landscape) and (max-height:480px) and (pointer:coarse){.turn{display:flex}}
+@media (max-height:640px){
+  .tnum{font-size:64px}.g-ok .btn{padding:14px 18px;font-size:22px}.hero svg{max-height:140px}.title{font-size:40px}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- メニュー -->
+  <section id="s-menu" class="screen wood on">
+    <div class="hero" id="hero"></div>
+    <h1 class="title">謝罪道場</h1>
+    <p class="lead">〜 謝罪の角度を極めろ 〜<br>スマホを前に倒して、誠意の角度をぴったり決める。</p>
+    <label class="field"><span>名前</span><input id="in-name" maxlength="10" autocomplete="off" placeholder="名前"></label>
+    <div class="menu-btns">
+      <button class="btn primary big" id="b-daily">1日1回限り　本番謝罪<small id="b-daily-sub">5問の誤差の合計で、全国の順位がつきます</small></button>
+      <div class="row2">
+        <button class="btn ghost small" id="b-rank" type="button">今日のランキングを見る</button>
+        <button class="btn ghost small" id="b-rank-y" type="button">昨日のランキングを見る</button>
+      </div>
+      <button class="btn paper" id="b-solo">一人で遊ぶ<small>練習 / サバイバル / ノーミス / スコアアタック</small></button>
+      <button class="btn paper" id="b-online">友達とオンライン対戦<small>お題は同じ。ズレの合計が少ない人の勝ち</small></button>
+      <div class="row2">
+        <button class="btn ghost" id="b-how">遊び方</button>
+        <button class="btn ghost" id="b-set">設定</button>
+      </div>
+    </div>
+    <div class="tips">
+      <h3>お辞儀の角度の目安</h3>
+      <p>一般的なビジネスマナーでは、会釈は約15°、敬礼は約30°、最敬礼は約45°が目安です。お詫びの場面では、最敬礼（45°前後）が使われます。このゲームでは、お題の角度に応じて、〜20°を会釈、〜35°を敬礼、〜55°を最敬礼、〜75°を深謝、それ以上を土下座と呼んでいます。</p>
+    </div>
+    <div class="ad-slot" data-ad hidden></div>
+    <footer class="foot"><a href="privacy.html">プライバシーポリシー</a></footer>
+  </section>
+
+  <!-- 一人で -->
+  <section id="s-solo" class="screen">
+    <div class="band"><button class="back" data-go="s-menu">← 戻る</button><div id="so-hero"></div></div>
+    <h2 class="plaque">モードを選ぶ</h2>
+    <div id="so-list" style="display:flex;flex-direction:column;gap:14px;padding-bottom:10px"></div>
+  </section>
+
+  <!-- オンライン入口 -->
+  <section id="s-online" class="screen wood">
+    <button class="back" data-go="s-menu">← 戻る</button>
+    <h2>オンライン対戦</h2>
+    <p class="note">全員に同じ角度のお題が出ます。ズレの合計が少ない人の勝ち。</p>
+    <div class="card">
+      <h3>部屋を作る</h3>
+      <p>コードが発行されます。友達に伝えてください。</p>
+      <button class="btn primary" id="on-create">部屋を作る</button>
+    </div>
+    <div class="card">
+      <h3>部屋に入る</h3>
+      <input class="code-in" id="on-code" maxlength="4" inputmode="latin" autocomplete="off" placeholder="CODE" style="background:#e9e3d4;color:var(--ink)">
+      <button class="btn primary" id="on-join">入る</button>
+    </div>
+    <p class="note">同じWi-Fiなら確実につながります。モバイル回線どうしだと、つながらないことがあります。</p>
+  </section>
+
+  <!-- ロビー -->
+  <section id="s-lobby" class="screen wood">
+    <div class="sect">
+      <span class="label" style="color:var(--dim);text-align:center">部屋コード</span>
+      <div class="lb-code" id="lb-code">----</div>
+      <button class="btn ghost small" id="lb-share" style="align-self:center">招待リンクをシェア</button>
+    </div>
+    <div class="sect">
+      <div class="row" style="display:flex;justify-content:space-between"><span class="label">参加者</span><span class="label" id="lb-count"></span></div>
+      <ul class="plist" id="lb-list"></ul>
+    </div>
+    <div class="sect on-dark" id="lb-host">
+      <div class="row"><span>勝負の回数</span><div class="stepper" id="lb-rounds"></div></div>
+      <button class="btn primary" id="lb-start">ゲームスタート</button>
+    </div>
+    <div class="sect" id="lb-guest" hidden>
+      <p class="lead" id="lb-ginfo"></p>
+      <p class="note" style="text-align:center">ホストがスタートするのを待っています…</p>
+    </div>
+    <button class="btn ghost" id="lb-leave" style="margin-top:auto">退室する</button>
+  </section>
+
+  <!-- ゲーム -->
+  <section id="s-game" class="screen">
+    <div class="g-top">
+      <button class="icon-btn" id="g-quit" aria-label="やめる">✕</button>
+      <div class="g-mid">
+        <div class="g-info" id="g-info"></div>
+        <div class="g-sub" id="g-sub"></div>
+        <div class="g-bar" id="g-barbox"><i id="g-bar"></i></div>
+      </div>
+      <div class="g-timer" id="g-timer"></div>
+    </div>
+    <div class="g-target">
+      <span class="chip" id="g-tname">謝罪</span>
+      <div class="tnum"><span id="g-tnum">45</span><small>°</small></div>
+      <div class="scene" id="g-scene"></div>
+    </div>
+    <div class="g-stage" id="g-stage"></div>
+    <div class="g-ok"><button class="btn primary" id="g-ok" type="button">OK</button></div>
+    <div class="g-hint" id="g-hint"></div>
+    <div class="g-players" id="g-players"></div>
+    <div class="slider-wrap" id="slider-wrap" hidden>
+      <input type="range" id="slider" min="-100" max="100" step="0.1" value="0">
+      <small id="slider-note">センサーが使えないので、スライダーで角度を操作します</small>
+    </div>
+    <div class="flash" id="g-flash"></div>
+    <div class="sheet" id="g-sheet"></div>
+  </section>
+
+  <!-- 結果 -->
+  <section id="s-final" class="screen wood">
+    <div id="fi-body" style="display:flex;flex-direction:column;gap:14px"></div>
+    <div class="fi-rank" id="fi-rank" hidden></div>
+    <div class="ad-slot" data-ad hidden></div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:auto;padding-top:20px">
+      <button class="btn primary" id="fi-again">もう一度</button>
+      <button class="btn paper" id="fi-rankopen" hidden>ランキングを見る</button>
+      <button class="btn paper" id="fi-share">結果をシェア</button>
+      <button class="btn ghost" id="fi-menu">メニューへ</button>
+    </div>
+  </section>
+
+  <!-- ランキング -->
+  <section id="s-rank" class="screen">
+    <button class="back" data-go="s-menu">← 戻る</button>
+    <h2>本番謝罪ランキング</h2>
+    <p class="note" id="rk-day"></p>
+    <div id="rk-body"></div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:auto;padding-top:14px">
+      <button class="btn primary" id="rk-play">本番に挑戦する</button>
+      <button class="btn ghost small" id="rk-yday" type="button">昨日のランキングを見る</button>
+      <button class="btn ghost small" id="rk-reload" type="button">更新する</button>
+    </div>
+  </section>
+
+  <!-- 設定 -->
+  <section id="s-set" class="screen wood">
+    <button class="back" data-go="s-menu">← 戻る</button>
+    <h2>設定</h2>
+    <div class="sect">
+      <span class="label">操作方法</span>
+      <div class="seg" id="se-input">
+        <button data-v="auto">自動</button><button data-v="sensor">センサー</button><button data-v="slider">スライダー</button>
+      </div>
+      <p class="note">iPhoneは「センサーを有効にする」を押して、許可してください。</p>
+      <button class="btn paper small" id="se-enable">センサーを有効にする</button>
+    </div>
+    <div class="sect">
+      <span class="label">センサーテスト（スマホを立てると0°、水平だと90°、後ろへ倒すとマイナス）</span>
+      <div class="live" id="se-live">0.0°</div>
+      <p class="note" id="se-state"></p>
+    </div>
+    <div class="sect">
+      <span class="label">0°の位置</span>
+      <p class="note">スマホを立てるのがつらいときは、楽に構えた姿勢で「0°にする」を押してください。その姿勢から水平までが、0〜90°になります。</p>
+      <div class="row2">
+        <button class="btn paper small" id="se-zero">今の持ち方を0°にする</button>
+        <button class="btn ghost small" id="se-zero-reset">元に戻す</button>
+      </div>
+      <p class="note" id="se-zero-state"></p>
+    </div>
+    <label class="switch"><input type="checkbox" id="se-mute"><span><b>効果音をオフ</b></span></label>
+  </section>
+
+  <div class="modal" id="m-how" hidden>
+    <div class="box">
+      <h3 style="margin:0;font-family:var(--serif);font-size:22px">遊び方</h3>
+      <ol>
+        <li>スマホを<b>縦</b>に持って、画面を自分に向けます。まっすぐ立てた状態が<b>0°</b>、水平が<b>90°</b>です。</li>
+        <li>お題の角度を想像して、<b>お辞儀するように</b>スマホの上を手前に倒します。<b>今の角度は表示されません。</b>お題の絵（赤い影）が出るのは、練習モードだけです。</li>
+        <li>「これだ」と思う角度で、<b>OKボタン</b>を押します。</li>
+        <li>お題は、<b>−100°〜100°</b>です。ときどき出る<b>マイナスのお題</b>（仰け反り）は、スマホを立てた位置から、<b>後ろへ</b>倒します。</li>
+        <li>押した角度が表示されて、<b>答え合わせ</b>です。お題とのズレ（誤差）が小さいほど、誠意が伝わります。</li>
+      </ol>
+      <button class="btn primary" id="m-how-ok">分かった</button>
+    </div>
+  </div>
+
+  <div class="modal" id="m-card" hidden>
+    <div class="box" style="align-items:center">
+      <img id="card-img" alt="結果カード" style="width:100%;max-width:300px;border-radius:12px;display:block">
+      <p class="note" style="color:#4a536b;text-align:center">長押しで画像を保存できます</p>
+      <div class="row2" style="width:100%">
+        <a class="btn paper small" id="card-dl" download="shazai.png" style="border:1.5px solid #1b223633">画像を保存</a>
+        <button class="btn ghost small" id="card-copy" type="button" style="color:var(--ink);border-color:#1b223655">文字をコピー</button>
+      </div>
+      <button class="btn primary" id="card-close" type="button">閉じる</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <div class="busy" id="busy" hidden><i></i><span id="busy-t">つないでいます…</span></div>
+  <div class="turn">スマホを縦向きにして遊んでください</div>
+</div>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const r1 = v => Math.round(v * 10) / 10;
+const randInt = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const fmt = v => Number.isInteger(v) ? String(v) : v.toFixed(1);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ---------- 保存 ---------- */
+const KEY = 'shazai-v1';
+let S = { name: '', mute: false, input: 'auto', blind: false, zero: 0, params: { survival: 10, nomiss: 3, score: 5 }, rounds: 5, best: {}, seenHow: false };
+try {
+  const j = JSON.parse(localStorage.getItem(KEY) || '{}');
+  S = Object.assign(S, j);
+  S.params = Object.assign({ survival: 10, nomiss: 3, score: 5 }, j.params || {});
+  S.best = j.best || {};
+} catch (e) {}
+if (!S.name) S.name = 'ゲスト' + randInt(10, 99);
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+
+/* ---------- 定数 ---------- */
+const ONLINE_LIMIT = 25000;
+// 「本番謝罪」を1日1回にするか。いまはテスト中なので false（何回でも遊べる）。公開するときは true にする。
+// true にするときは、サーバーのルールも「1日1回」のほうに替える（ランキング設定.md を参照）
+const DAILY_ONCE = false;
+const MODES = [
+  { key: 'daily', name: '1日1回限り　本番謝罪', desc: '今日は全員が同じ5問。誤差の合計で、順位がつきます。' },
+  { key: 'practice', name: '練習', desc: 'ゆっくり練習。このモードは終わりがありません。' },
+  { key: 'survival', name: 'サバイバル', desc: '誤差の合計が上限に達したらアウト。何ステージ突破できる？', p: { label: '上限（誤差の合計）', min: 2, max: 60, step: 1, unit: '°' } },
+  { key: 'nomiss', name: 'ノーミス', desc: '1回でも許容誤差を超えたらアウト。何連続で決められる？', p: { label: '許容する誤差', min: 1, max: 15, step: 0.5, unit: '°' } },
+  { key: 'score', name: 'スコアアタック', desc: '決まった回数の誤差の合計で勝負。少ないほど立派。', p: { label: '回数', min: 1, max: 30, step: 1, unit: '回' } },
+];
+const MODE = Object.fromEntries(MODES.map(m => [m.key, m]));
+
+/* ---------- 広告 ----------
+   Google AdSense の「ca-pub-…」と広告ユニットの slot ID を入れると、メニューと結果画面にだけ広告が出ます。
+   空のままなら、広告は表示されず、枠も出ません。ゲーム中の画面には出しません（誤クリック防止）。 */
+const ADS = { client: '', slot: '' };
+function initAds() {
+  if (!ADS.client || !ADS.slot) return;
+  const s = document.createElement('script');
+  s.async = true; s.crossOrigin = 'anonymous';
+  s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + encodeURIComponent(ADS.client);
+  document.head.appendChild(s);
+  $$('[data-ad]').forEach(el => {
+    el.hidden = false;
+    el.innerHTML = '<small>広告</small><ins class="adsbygoogle" style="display:block" data-ad-client="' + esc(ADS.client) + '" data-ad-slot="' + esc(ADS.slot) + '" data-ad-format="auto" data-full-width-responsive="true"></ins>';
+  });
+}
+function pushAds(screenId) {
+  if (!ADS.client || !ADS.slot) return;
+  $$('#' + screenId + ' ins.adsbygoogle').forEach(ins => {
+    if (ins.dataset.pushed) return;
+    ins.dataset.pushed = '1';
+    try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) {}
+  });
+}
+
+/* ---------- 小物 ---------- */
+let toastT;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 2600); }
+function busy(msg) { $('#busy-t').textContent = msg || 'つないでいます…'; $('#busy').hidden = false; }
+function idle() { $('#busy').hidden = true; }
+const vib = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
+let wl = null;
+async function wake(on) { try { if (on && 'wakeLock' in navigator) { if (!wl) wl = await navigator.wakeLock.request('screen'); } else if (wl) { await wl.release(); wl = null; } } catch (e) { wl = null; } }
+document.addEventListener('visibilitychange', () => { if (!document.hidden && current === 's-game') { wl = null; wake(true); } });
+
+const sfx = (() => {
+  let ac;
+  const ctx = () => { try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); return ac; } catch (e) { return null; } };
+  const tone = (f, t0, d, type = 'sine', v = .07) => {
+    if (S.mute) return; const c = ctx(); if (!c) return;
+    const o = c.createOscillator(), g = c.createGain(), t = c.currentTime + t0;
+    o.type = type; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t + .01); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+    o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + d + .02);
+  };
+  return {
+    unlock: ctx,
+    go() { tone(660, 0, .12); tone(990, .1, .16); },
+    tap() { tone(880, 0, .07, 'triangle', .09); },
+    lock(err) { if (err <= 1.5) { tone(784, 0, .12); tone(988, .1, .12); tone(1318, .2, .3); } else if (err <= 6) tone(660, 0, .2, 'triangle'); else tone(200, 0, .4, 'sawtooth', .05); },
+  };
+})();
+document.addEventListener('pointerdown', () => sfx.unlock(), { once: true });
+
+/* ---------- 画面 ---------- */
+let current = 's-menu';
+function show(id) {
+  current = id;
+  $$('.screen').forEach(s => s.classList.toggle('on', s.id === id));
+  wake(id === 's-game');
+  if (id === 's-set') refreshSet();
+  if (id === 's-menu') updateMenu();
+  if (id === 's-menu' || id === 's-final') pushAds(id);
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-go]'); if (b) show(b.dataset.go); });
+
+/* ---------- キャラ ---------- */
+// 背景：道場（今日の謝罪ランキング以外）と、会社（今日の謝罪ランキング）。広い面は、画面の外まで塗る
+// 道場：白い壁、茶色の腰壁と柱、床の間（掛け軸と神棚）、畳
+const dojoSlatPath = () => { let d = ''; for (let x = -600; x < 900; x += 15) d += `M${x} 104V222`; return d; };
+const tatamiPath = () => {   // 畳の縁（濃い緑）。奥行きがあるように、縦の目地を、手前ほど広げる
+  const ys = [232, 262, 304, 362, 440, 548, 700]; let d = '';
+  ys.forEach(y => { d += `M-600 ${y}H900`; });
+  for (let i = 0; i < ys.length - 1; i++) {
+    const k = 1 + i * 0.55;   // 手前の段ほど、幅が広い
+    const w = 118 * k, off = (i % 2) * w / 2;
+    for (let x = 150 - 20 * w + off; x < 900; x += w) d += `M${x.toFixed(0)} ${ys[i]}V${ys[i + 1]}`;
+  }
+  return d;
+};
+const carpetPath = () => { let d = ''; for (let x = -600; x < 900; x += 40) d += `M${x} 232V700`; for (let y = 232; y < 700; y += 26) d += `M-600 ${y}H900`; return d; };
+const SERIF = `font-family="'Hiragino Mincho ProN','Yu Mincho','Noto Serif JP',serif" font-weight="700"`;
+const sceneSVG = () => `
+    <g class="bgs dojo">
+      <rect x="-600" y="-600" width="1500" height="832" fill="#f6f2e8"/>
+      <rect x="-600" y="104" width="1500" height="118" fill="#6e4426"/>
+      <path d="${dojoSlatPath()}" stroke="#4a2c18" stroke-width="2.2" fill="none"/>
+      <rect x="-600" y="98" width="1500" height="7" fill="#8e5128"/>
+      <rect x="-600" y="222" width="1500" height="10" fill="#4a2b17"/>
+      <rect x="-600" y="232" width="1500" height="700" fill="#a9c776"/>
+      <path d="${tatamiPath()}" stroke="#6f9650" stroke-width="3" fill="none"/>
+      <g><rect x="134" y="104" width="62" height="118" fill="#f6f2e8"/><rect x="134" y="200" width="62" height="22" fill="#4a2b17"/><path d="M146 200V222M158 200V222M170 200V222M182 200V222" stroke="#33200f" stroke-width="2.4"/></g>
+      <g><rect x="124" y="-600" width="10" height="822" fill="#8b4a1f"/><rect x="196" y="-600" width="10" height="822" fill="#8b4a1f"/><path d="M127 -600V222M199 -600V222" stroke="#a8622d" stroke-width="2"/></g>
+      <g><rect x="14" y="8" width="30" height="44" fill="#262626"/><rect x="17" y="11" width="24" height="38" fill="#d3d6da"/><circle cx="29" cy="26" r="6.5" fill="#8d9298"/><path d="M19 49C19 38 39 38 39 49Z" fill="#f4f4f4"/>
+        <rect x="48" y="8" width="30" height="44" fill="#262626"/><rect x="51" y="11" width="24" height="38" fill="#d3d6da"/><circle cx="63" cy="26" r="6.5" fill="#8d9298"/><path d="M53 49C53 38 73 38 73 49Z" fill="#f4f4f4"/></g>
+      <g><rect x="140" y="30" width="50" height="5" rx="1.5" fill="#8b4a1f"/><rect x="147" y="14" width="36" height="16" fill="#d9a63a"/><path d="M143 14L165 4L187 14Z" fill="#c9922c"/><rect x="154" y="18" width="9" height="12" fill="#f0cf79"/><rect x="167" y="18" width="9" height="12" fill="#f0cf79"/></g>
+      <g><path d="M165 35V40" stroke="#4d3b2a" stroke-width="1.5"/><rect x="153" y="40" width="24" height="70" fill="#4f7a46"/><rect x="157" y="46" width="16" height="56" fill="#f4f1e8"/><rect x="151" y="108" width="28" height="4" rx="2" fill="#6d4a2b"/>
+        <text x="165" y="58" text-anchor="middle" font-size="9.5" ${SERIF} fill="#555">誠</text><text x="165" y="70" text-anchor="middle" font-size="9.5" ${SERIF} fill="#555">心</text><text x="165" y="82" text-anchor="middle" font-size="9.5" ${SERIF} fill="#555">誠</text><text x="165" y="94" text-anchor="middle" font-size="9.5" ${SERIF} fill="#555">意</text></g>
+      <g><rect x="138" y="170" width="13" height="30" fill="#b9936a"/><rect x="140" y="172" width="9" height="26" fill="#a98763"/></g>
+      <g><path d="M184 200V184M184 190Q179 182 181 176M184 188Q190 180 188 174" stroke="#4b8a43" stroke-width="2" fill="none"/><circle cx="181" cy="173" r="4.2" fill="#f2d24b"/><circle cx="189" cy="172" r="4.2" fill="#f2d24b"/><circle cx="181" cy="173" r="1.6" fill="#e0a82a"/><circle cx="189" cy="172" r="1.6" fill="#e0a82a"/><rect x="176" y="196" width="16" height="6" rx="2" fill="#6d4a2b"/></g>
+    </g>
+    <g class="bgs office">
+      <rect x="-600" y="-600" width="1500" height="832" fill="#cfd8e5"/>
+      <rect x="-600" y="214" width="1500" height="18" fill="#a5b2c7"/>
+      <rect x="-600" y="232" width="1500" height="700" fill="#58677f"/>
+      <path d="${carpetPath()}" stroke="#4d5b73" stroke-width="1.4" fill="none"/>
+      <g><rect x="118" y="20" width="84" height="94" rx="3" fill="#f4f7fb"/><rect x="123" y="25" width="74" height="84" fill="#a9d5ff"/>
+        <rect x="127" y="76" width="14" height="33" fill="#7690b3"/><rect x="144" y="62" width="16" height="47" fill="#5d7aa1"/><rect x="163" y="82" width="12" height="27" fill="#7690b3"/><rect x="178" y="68" width="16" height="41" fill="#6784aa"/>
+        <path d="M160 25V109M123 67H197" stroke="#f4f7fb" stroke-width="3" fill="none"/></g>
+      <g><circle cx="96" cy="15" r="11" fill="#fff" stroke="#7a889f" stroke-width="2.6"/><path d="M96 15V8M96 15L101 18" stroke="#33405a" stroke-width="1.8" stroke-linecap="round" fill="none"/></g>
+      <g><rect x="16" y="30" width="54" height="40" rx="2" fill="#6b5236"/><rect x="21" y="35" width="44" height="30" fill="#f6f1e7"/><text x="43" y="57" text-anchor="middle" font-size="19" ${SERIF} fill="#33405a">誠意</text><text x="43" y="28" text-anchor="middle" font-size="9" fill="#6a7790">社訓</text></g>
+      <g><path d="M10 196Q4 176 14 166Q20 184 17 196ZM20 196Q22 172 34 164Q32 184 24 196ZM26 198Q38 184 48 188Q40 198 28 200Z" fill="#3f8f5a"/><path d="M8 200H34L31 232H11Z" fill="#b5523b"/></g>
+    </g>
+`;
+function figureSVG(themed) {
+  return `<svg viewBox="0 0 300 250" aria-hidden="true">${themed ? sceneSVG() : ''}
+    <line class="ground" x1="20" y1="232" x2="280" y2="232"/>
+    <g class="pl" transform="translate(-26 0)">
+    <path class="tarc-halo" d=""/><path class="tarc" d=""/>
+    <rect class="leg" x="109" y="148" width="22" height="76" rx="9"/>
+    <rect class="shoe" x="105" y="222" width="44" height="10" rx="5"/>
+    <g class="ghost" transform="rotate(0 120 148)">
+      <g class="halo"><rect x="103" y="78" width="34" height="74" rx="15"/><circle cx="120" cy="58" r="19"/></g>
+      <g class="line"><rect x="103" y="78" width="34" height="74" rx="15"/><circle cx="120" cy="58" r="19"/></g>
+    </g>
+    <g class="bag"><path d="M71 207 v-8 h18 v8" fill="none" stroke="#2a2f3a" stroke-width="3"/><rect x="62" y="206" width="36" height="25" rx="4"/><rect x="76" y="214" width="8" height="5" rx="1" fill="#c9a227"/></g>
+    <g class="torso" transform="rotate(0 120 148)">
+      <rect class="suit" x="103" y="78" width="34" height="74" rx="15"/>
+      <rect class="shirt" x="129" y="86" width="8" height="46" rx="3"/>
+      <path class="collar" d="M123 74 L137 79 L133 91 L126 81Z"/>
+      <rect class="tie" x="132.5" y="92" width="4" height="30" rx="1.5"/>
+      <path class="lapel" d="M137 84 L127 108 L137 126"/>
+      <g class="dogi"><path class="dg-line" d="M123 76L137 98L133 124M128 76L137 90"/><rect class="obi" x="102" y="128" width="36" height="9" rx="2"/><rect class="obi" x="133" y="126" width="9" height="13" rx="2"/><path class="obi" d="M136 138L141 156L145 154L142 138Z"/></g>
+      <rect class="arm" x="112" y="88" width="15" height="56" rx="7"/>
+      <path class="lanyard" d="M121 75 L129 103"/><rect class="idcard" x="125" y="102" width="9" height="12" rx="1.5"/><rect class="idband" x="125" y="102" width="9" height="4" rx="1.5"/>
+      <circle class="skin" cx="120" cy="58" r="19"/>
+      <ellipse class="skin2" cx="113" cy="61" rx="3.2" ry="4.4"/>
+      <path class="hair" d="M102 66 C97 45 107 36 122 37 C135 38 142 46 139.5 57 C133 48 124 46 114 49 C108 51 105 56 105 66Z"/>
+      <g class="dogi"><path class="hachi" d="M102 53Q120 41 138 53L138.5 59Q120 47 101.5 59Z"/><path class="hachi" d="M102 55L91 63L96 66L103 59Z"/></g>
+      <path class="nose" d="M138.5 57 Q143.5 62 138.5 66"/>
+      <circle fill="#1a1a2a" cx="130" cy="61" r="2"/>
+      <path class="sbrow" d="M126 55.5 L134 54.5"/><path class="smouth" d="M130 71 H135.5"/>
+    </g>
+    </g>
+    <g transform="translate(18 0)"><g transform="translate(232 232) scale(1.07) translate(-232 -232)"><g class="cust" data-mood="wait">
+      <rect class="leg" x="222" y="150" width="20" height="74" rx="8"/>
+      <rect class="shoe" x="208" y="222" width="40" height="10" rx="5"/>
+      <path class="sg hakama" d="M210 128H254L264 224H200Z"/><path class="sg pleat" d="M222 134L218 224M232 134V224M242 134L246 224"/>
+      <rect class="csuit" x="208" y="82" width="48" height="76" rx="19"/>
+      <path class="sg dg-line" d="M224 86L232 120L240 86"/><rect class="sg obi" x="208" y="126" width="48" height="9" rx="2"/>
+      <rect class="shirt" x="226" y="88" width="12" height="44" rx="4"/>
+      <path class="collar" d="M225 84 L239 84 L232 98Z"/>
+      <rect class="ctie" x="229.5" y="95" width="5" height="32" rx="2"/>
+      <path class="psq" d="M213 99 L221 97 L222 104 L213 105Z"/>
+      <circle class="pin" cx="249" cy="100" r="2.6"/>
+      <rect class="csuit2" x="196" y="106" width="56" height="15" rx="7.5"/>
+      <ellipse class="skin2" cx="211" cy="64" rx="3" ry="5"/><ellipse class="skin2" cx="253" cy="64" rx="3" ry="5"/>
+      <circle class="cskin" cx="232" cy="62" r="21"/>
+      <path class="chair" d="M211 58 A21 21 0 0 1 253 58 Q244 46 232 46 Q220 46 211 58Z"/>
+      <ellipse class="chair" cx="211.5" cy="65" rx="3" ry="7"/><ellipse class="chair" cx="252.5" cy="65" rx="3" ry="7"/>
+      <path class="sg beard" d="M221 80Q232 112 243 80Q232 94 221 80Z"/>
+      <circle class="blush" cx="217" cy="72" r="4"/><circle class="blush" cx="247" cy="72" r="4"/>
+      <circle class="eye" cx="224" cy="63" r="2.3"/><circle class="eye" cx="240" cy="63" r="2.3"/>
+      <circle class="glass" cx="224" cy="63" r="6.5"/><circle class="glass" cx="240" cy="63" r="6.5"/><path class="glass" d="M230.5 63 H233.5"/>
+      <path class="stache" d="M221 72 Q227 68.5 232 70.5 Q237 68.5 243 72 Q237 76 232 74 Q227 76 221 72Z"/>
+      <g class="face f-wait"><path class="brow" d="M218 54 H229 M235 54 H246"/><path class="mouth" d="M227 80 H237"/></g>
+      <g class="face f-happy"><path class="brow" d="M218 55 Q223 51 229 54 M235 54 Q241 51 246 55"/><path class="mouth" d="M226 78 Q232 85 238 78"/></g>
+      <g class="face f-delight"><path class="brow" d="M218 52 Q223 47 229 51 M235 51 Q241 47 246 52"/><path class="mouthfill" d="M225 77 Q232 91 239 77Z"/></g>
+      <g class="face f-angry"><path class="brow" d="M217 50 L229 57 M247 50 L235 57"/><path class="mouth" d="M226 84 Q232 77 238 84"/></g>
+      <g class="face f-furious"><path class="brow" d="M216 47 L229 58 M248 47 L235 58"/><ellipse class="mouthfill" cx="232" cy="82" rx="7" ry="6.5"/><path class="teeth" d="M227.5 78 H236.5"/></g>
+      <path class="vein" d="M252 38 L258 34 M254 45 H262 M252 52 L258 56"/>
+    </g></g></g>
+    <g transform="translate(18 0)"><g class="mannequin">
+      <ellipse class="mqbase" cx="232" cy="230" rx="26" ry="5"/>
+      <rect class="mq" x="221" y="152" width="10" height="76" rx="5"/><rect class="mq" x="233" y="152" width="10" height="76" rx="5"/>
+      <rect class="mq" x="199" y="94" width="11" height="60" rx="5.5"/><rect class="mq" x="254" y="94" width="11" height="60" rx="5.5"/>
+      <path class="mq" d="M212 88 Q232 80 252 88 L250 148 Q232 158 214 148Z"/>
+      <rect class="mq" x="227" y="74" width="10" height="14" rx="3"/>
+      <ellipse class="mq" cx="232" cy="58" rx="15" ry="19"/>
+      <path class="mqs" d="M214 112 Q232 118 250 112"/>
+      <circle class="mq" cx="212" cy="92" r="5"/><circle class="mq" cx="252" cy="92" r="5"/>
+    </g></g>
+  </svg>`;
+}
+// TOPの絵：道場の入口（瓦の庇、のれん、赤提灯、草履、竹刀）。ゲーム画面の絵は使いまわさない
+const menuHeroSVG = () => {
+  const roofY = x => 20 + 52 * (x / 300) * (1 - x / 300);
+  const tiles = [14, 40, 66, 92, 118, 144, 170, 196, 222, 248, 274].map(x => `<path d="M${x} 8V${(roofY(x) - 2).toFixed(1)}" stroke="#4d5262" stroke-width="2"/>`).join('');
+  const panels = [...'謝罪道場'].map((ch, i) => { const x = 70 + i * 40; return `<rect x="${x}" y="56" width="36" height="100" rx="2" fill="#1f3a6b"/><rect x="${x}" y="148" width="36" height="8" fill="#2e5192"/><path d="M${x + 3} 58V146M${x + 33} 58V146" stroke="#2e5192" stroke-width="1"/><circle cx="${x + 18}" cy="53" r="2.4" fill="#d9b44a"/><text x="${x + 18}" y="108" text-anchor="middle" font-size="30" ${SERIF} fill="#f6f1e7">${ch}</text>`; }).join('');
+  const lantern = (cx, ch, cls) => `<g class="lantern ${cls}" style="transform-origin:${cx}px 30px"><path d="M${cx} 30V56" stroke="#2b2420" stroke-width="2"/><rect x="${cx - 10}" y="56" width="20" height="6" rx="2" fill="#2b2420"/><ellipse cx="${cx}" cy="86" rx="18" ry="25" fill="#c8281e"/><path d="M${cx - 17} 78Q${cx} 72 ${cx + 17} 78M${cx - 18} 88Q${cx} 82 ${cx + 18} 88M${cx - 17} 98Q${cx} 92 ${cx + 17} 98" stroke="#a01c14" stroke-width="1.6" fill="none"/><rect x="${cx - 10}" y="108" width="20" height="6" rx="2" fill="#2b2420"/><path d="M${cx} 114V128" stroke="#d9b44a" stroke-width="2"/><ellipse cx="${cx}" cy="131" rx="3" ry="5" fill="#d9b44a"/><text x="${cx}" y="93" text-anchor="middle" font-size="19" ${SERIF} fill="#fbe9c8">${ch}</text></g>`;
+  const shinai = (bx, tx) => `<path d="M${bx} 178L${tx} 128" stroke="#d6b25a" stroke-width="4" stroke-linecap="round"/><path d="M${bx} 178L${bx + 1.6} 168" stroke="#6b3f1d" stroke-width="5" stroke-linecap="round"/><circle cx="${bx + 2}" cy="166" r="3.4" fill="#2b2420"/>`;
+  return `<svg viewBox="0 0 300 196" aria-hidden="true">
+    <path d="M0 0H300V20Q150 46 0 20Z" fill="#3b3f4c"/><path d="M0 0H300V7H0Z" fill="#2b2e38"/><path d="M0 13H300" stroke="#4d5262" stroke-width="2"/>${tiles}
+    <rect x="62" y="50" width="176" height="6" rx="3" fill="#8b4a1f"/>
+    <g class="noren">${panels}</g>
+    ${lantern(30, '誠', 'l')}${lantern(270, '意', 'r')}
+    <rect x="0" y="168" width="300" height="28" fill="#6b4a2b"/><rect x="0" y="168" width="300" height="5" fill="#8e6a3e"/><path d="M0 182H300M0 190H300" stroke="#5a3d22" stroke-width="1.5"/>
+    <g><ellipse cx="116" cy="180" rx="10" ry="4.5" fill="#d8c08a" stroke="#b59a62"/><path d="M109 180Q116 170 123 180" stroke="#b02a24" stroke-width="2.4" fill="none"/><ellipse cx="144" cy="180" rx="10" ry="4.5" fill="#d8c08a" stroke="#b59a62"/><path d="M137 180Q144 170 151 180" stroke="#b02a24" stroke-width="2.4" fill="none"/></g>
+    ${shinai(50, 58)}${shinai(250, 242)}
+  </svg>`;
+};
+// モード選択の絵：稽古場（竹刀掛け、太鼓、座布団）
+const soloHeroSVG = () => {
+  const tacks = Array.from({ length: 14 }, (_, i) => { const a = i / 14 * Math.PI * 2; return `<circle cx="${(244 + Math.cos(a) * 27.2).toFixed(1)}" cy="${(64 + Math.sin(a) * 27.2).toFixed(1)}" r="1.5" fill="#d9b44a"/>`; }).join('');
+  const rackShinai = (bx, tx) => `<path d="M${bx} 106L${tx} 18" stroke="#d6b25a" stroke-width="4" stroke-linecap="round"/><path d="M${bx} 106L${bx - 0.4} 92" stroke="#6b3f1d" stroke-width="5" stroke-linecap="round"/><circle cx="${bx - 0.5}" cy="90" r="3" fill="#2b2420"/>`;
+  const cushion = (x, col) => `<rect x="${x}" y="98" width="46" height="15" rx="5" fill="${col}"/><path d="M${x + 4} 105.5H${x + 42}" stroke="rgba(255,255,255,.35)" stroke-width="1.4"/><circle cx="${x + 3}" cy="98" r="2" fill="#d9b44a"/><circle cx="${x + 43}" cy="98" r="2" fill="#d9b44a"/>`;
+  return `<svg viewBox="0 0 300 124" aria-hidden="true">
+    <rect x="0" y="114" width="300" height="10" fill="#4a2b17"/>
+    <g><rect x="14" y="106" width="70" height="8" rx="2" fill="#7a4a26"/><rect x="20" y="36" width="7" height="70" rx="2" fill="#8b4a1f"/><rect x="71" y="36" width="7" height="70" rx="2" fill="#8b4a1f"/>
+      ${rackShinai(34, 30)}${rackShinai(49, 49)}${rackShinai(64, 68)}
+      <rect x="18" y="52" width="62" height="5" rx="2" fill="#a8622d"/><rect x="18" y="80" width="62" height="5" rx="2" fill="#a8622d"/></g>
+    ${cushion(108, '#6b2f7a')}${cushion(156, '#a3261f')}
+    <g><path d="M222 98L212 114M266 98L276 114" stroke="#6b3f1d" stroke-width="6" stroke-linecap="round"/><rect x="214" y="92" width="60" height="7" rx="2" fill="#6b3f1d"/>
+      <circle cx="244" cy="64" r="30" fill="#8a2f1e"/><circle cx="244" cy="64" r="24" fill="#f0e2bd"/>${tacks}
+      <circle cx="244" cy="64" r="8" fill="#c23a2a"/><circle cx="244" cy="64" r="3.4" fill="#f0e2bd"/>
+      <path d="M222 26L250 54M268 26L240 54" stroke="#e6c682" stroke-width="3.6" stroke-linecap="round"/></g>
+  </svg>`;
+};
+$('#hero').innerHTML = menuHeroSVG();
+$('#so-hero').innerHTML = soloHeroSVG();
+$('#g-stage').insertAdjacentHTML('afterbegin', figureSVG(true));
+const FIG = $('#g-stage svg'), F_TORSO = $('.torso', FIG), F_GHOST = $('.ghost', FIG), F_ARC = $('.tarc', FIG), F_ARC2 = $('.tarc-halo', FIG);
+function setTargetArc(t) {
+  const r = 78, cx = 120, cy = 148, rad = t * Math.PI / 180;
+  const x = cx + r * Math.sin(rad), y = cy - r * Math.cos(rad);
+  const d = `M ${cx} ${cy - r} A ${r} ${r} 0 ${Math.abs(t) > 180 ? 1 : 0} ${t >= 0 ? 1 : 0} ${x.toFixed(1)} ${y.toFixed(1)}`;   // マイナスは、反対まわり
+  F_ARC.setAttribute('d', d); F_ARC2.setAttribute('d', d);
+  F_GHOST.setAttribute('transform', `rotate(${t} 120 148)`);
+}
+
+/* ---------- センサー ---------- */
+const Sensor = {
+  angle: 0, got: false, listening: false, denied: false, checked: false, slider: 0,
+  onOri(e) {
+    if (e.beta == null) return;
+    let b = e.beta; if (b < -90) b += 360;   // 後ろへ倒して、±180をまたいだ分も、つなげる（マイナスの角度）
+    const a = clamp(90 - b, -120, 130);
+    if (!Sensor.got) { Sensor.got = true; Sensor.angle = a; } else Sensor.angle += (a - Sensor.angle) * 0.4;
+  },
+  async enable() {
+    if (Sensor.got) return;
+    if (!Sensor.listening) { window.addEventListener('deviceorientation', Sensor.onOri, true); Sensor.listening = true; }
+    if (!Sensor.asking) {
+      try {
+        const D = window.DeviceOrientationEvent;
+        if (D && typeof D.requestPermission === 'function') {
+          Sensor.asking = true;
+          Sensor.denied = (await D.requestPermission()) !== 'granted';
+        }
+      } catch (e) { Sensor.denied = true; }
+      Sensor.asking = false;
+    }
+    setTimeout(() => { Sensor.checked = true; }, 1500);
+  },
+};
+const sliderMode = () => S.input === 'slider' || (S.input === 'auto' && Sensor.checked && !Sensor.got);
+// ゼロ調整：構えた姿勢を0°、水平を90°として、前側は線形に伸ばす。後ろ側（マイナス）は、そのまま
+const mapZero = raw => { const z = clamp(S.zero || 0, 0, 45); return raw >= z ? (raw - z) * 90 / (90 - z) : raw - z; };
+const curAngle = () => clamp(sliderMode() ? Sensor.slider : mapZero(Sensor.angle), -110, 130);
+$('#slider').addEventListener('input', e => { Sensor.slider = +e.target.value; });
+if (!window.isSecureContext) $('#slider-note').textContent = 'このページはHTTPSではないため、センサーが使えません。スライダーで操作します';
+
+/* ---------- 表現 ---------- */
+const sg = v => v < 0 ? '−' + (-v) : String(v);                       // マイナスは「−」で見せる
+const sgf = v => (v < 0 ? '−' : '') + Math.abs(v).toFixed(1);
+const tname = t => t < 0 ? '仰け反り' : t <= 20 ? '会釈' : t <= 35 ? '敬礼' : t <= 55 ? '最敬礼' : t <= 75 ? '深謝' : '土下座';
+const verdict = e => e <= 0.5 ? '完璧。誠意が痛いほど伝わる' : e <= 1.5 ? '見事な謝罪' : e <= 3 ? 'まあ、許そう' : e <= 6 ? 'もう少し誠意を' : e <= 12 ? 'それで謝ってるつもり？' : '出直してこい';
+const GRADES = [[0.5, 'S', '完璧'], [1.5, 'A', '合格'], [3, 'B', '許す'], [6, 'C', '保留'], [12, 'D', '再提出'], [Infinity, 'E', '出禁']];
+const grade = e => { const g = GRADES.find(x => e <= x[0]); return { rank: g[1], label: g[2] }; };
+const stampHTML = e => { const g = grade(e); return `<div class="stamp r-${g.rank}"><span>${g.label}</span></div>`; };
+const scene = t => t < 0 ? 'もはや謝罪ではない' : t <= 12 ? '軽く会釈' : t <= 20 ? 'すれ違いのご挨拶' : t <= 28 ? 'お客様のお出迎え' : t <= 36 ? 'ちょっとした遅刻のお詫び' : t <= 46 ? 'ミスをしたときのお詫び' : t <= 56 ? '取引先への正式なお詫び' : t <= 66 ? '会社を揺るがすミス' : t <= 76 ? '世間を騒がせてしまった' : t <= 84 ? '社長と並んで謝罪会見' : 'もう土下座しかない';
+const titleN = n => n >= 20 ? '謝罪会見の達人' : n >= 15 ? '部長クラス' : n >= 10 ? '中堅社員' : n >= 6 ? '新入社員' : n >= 3 ? '要研修' : '出禁';
+const titleAvg = a => a <= 0.8 ? '神の角度' : a <= 1.5 ? 'プロの謝罪' : a <= 3 ? '社会人レベル' : a <= 6 ? '要研修' : '出禁';
+// お題の角度：ふつうは 10〜100°。ときどき（約1割、3問目から、続けては出ない）マイナス（仰け反り）が出る。
+// 練習は5°きざみでマイナス無し、ほかは1°きざみ。範囲は -100〜100°
+function genTarget(i, prev, step = 1, rnd = Math.random) {
+  const ri = (a, b) => a + Math.floor(rnd() * (b - a + 1));
+  let t, n = 0;
+  do {
+    const neg = step !== 5 && i >= 3 && !(prev < 0) && rnd() < 0.1;   // 練習（5°きざみ）は、マイナス無し
+    const mag = step === 5 ? 5 * ri(2, 20) : ri(10, 100);
+    t = neg ? -mag : mag;
+  } while (t === prev && ++n < 10);
+  return t;
+}
+// 今日のお題：日付から決まる乱数で、その日は誰でも同じ5問になる
+// 日付は日本時間で切り替える（世界のどこで遊んでも、同じ日は同じ5問）
+const dailyId = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+function seededRng(str) {
+  let h = 1779033703 ^ str.length;
+  for (let i = 0; i < str.length; i++) { h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
+  let a = h >>> 0;
+  return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+function dailyTargets(id) {
+  const rnd = seededRng('shazai-' + id), out = [];
+  for (let i = 1; i <= 5; i++) out.push(genTarget(i, out[i - 2], 1, rnd));
+  return out;
+}
+
+/* ---------- ラウンド進行 ---------- */
+let G = null;   // ゲーム全体
+let R = null;   // 今のラウンド
+const Hist = [];   // 直近の角度の履歴（OKを押した瞬間のブレを除くため）
+// お客様の表情と、会見風のカメラのフラッシュ
+// お偉いさんの表情：誤差が小さいほど機嫌が良く、大きいほど怒る（5段階）
+const moodOf = e => e <= 0.5 ? 'delight' : e <= 3 ? 'happy' : e <= 6 ? 'wait' : e <= 12 ? 'angry' : 'furious';
+const MOOD_ANIM = { delight: 'jump', happy: 'hop', angry: 'fume', furious: 'rage' };
+function setMood(m, anim) {
+  const mq = $('.mannequin', FIG);
+  if (mq) { mq.classList.remove('wob'); void mq.getBoundingClientRect(); if (anim) mq.classList.add('wob'); }
+  const c = $('.cust', FIG); if (!c) return;
+  c.dataset.mood = m; c.classList.remove('hop', 'fume', 'rage', 'jump'); void c.getBoundingClientRect();
+  if (anim && MOOD_ANIM[m]) c.classList.add(MOOD_ANIM[m]);
+}
+function flash(n) {
+  const f = $('#g-flash');
+  for (let i = 0; i < n; i++) setTimeout(() => { f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }, i * 280);
+}
+function setTorso(a, animate) {
+  F_TORSO.classList.toggle('snap', !animate);
+  F_TORSO.style.transform = `rotate(${a}deg)`;
+}
+function beginRound(target, limitMs) {
+  R = { target, phase: 'play', t0: performance.now(), limit: limitMs || 0, angle: null, err: null };
+  Hist.length = 0;
+  $('#g-tname').textContent = tname(target);
+  $('#g-tnum').textContent = sg(target);
+  $('#g-scene').textContent = scene(target);
+  setTargetArc(target);
+  setTorso(0, false); void F_TORSO.getBoundingClientRect();   // 絵はOKを押すまで動かない
+  const practice = G.kind === 'solo' && G.mode === 'practice';
+  FIG.classList.toggle('practice', practice);       // 練習だけ、お題の絵（点線）が出て、相手がマネキンになる
+  const office = G.kind === 'solo' && G.mode === 'daily';   // 今日の謝罪ランキングは会社、それ以外は道場
+  FIG.classList.toggle('sc-office', office); FIG.classList.toggle('sc-dojo', !office);
+  FIG.classList.toggle('sensei', !office && !practice);   // 道場のモードの相手は、道場の先生（練習はマネキン）
+  $('#s-game').classList.toggle('th-office', office);
+  FIG.classList.toggle('hardmode', !practice);
+  setMood('wait', false);
+  sheet(null);
+  $('#g-timer').textContent = '';
+  sfx.go();
+}
+function tick() {
+  if (!R || current !== 's-game' || R.phase !== 'play') return;
+  const now = performance.now(), a = curAngle();
+  Hist.push({ t: now, a });
+  while (Hist.length && now - Hist[0].t > 800) Hist.shift();
+  if (R.limit && now - R.t0 > R.limit) doLock(a);   // 時間切れ：今の角度で確定
+}
+setInterval(tick, 30);
+// OKを押すと画面が揺れるので、押す直前（70〜300ms前）の角度の中央値を答えにする
+function angleAtPress() {
+  const now = performance.now();
+  const w = Hist.filter(h => now - h.t >= 70 && now - h.t <= 300).map(h => h.a).sort((x, y) => x - y);
+  return w.length >= 3 ? w[w.length >> 1] : curAngle();
+}
+function pressOK() {
+  if (!R || R.phase !== 'play' || current !== 's-game') return;
+  if (performance.now() - R.t0 < 500) return;   // 前の画面のタップの誤爆よけ
+  doLock(angleAtPress());
+}
+$('#g-ok').addEventListener('pointerdown', e => { e.preventDefault(); pressOK(); });
+$('#g-ok').addEventListener('click', pressOK);
+function doLock(a) {
+  if (!R || R.phase !== 'play') return;
+  const r = R;
+  r.phase = 'locked'; r.angle = r1(a); r.err = r1(Math.abs(r.angle - r.target));
+  G.lastAngle = r.angle; G.lastTarget = r.target;
+  vib(25); sfx.tap();
+  // 答え合わせ：ここで初めて絵が、押した角度までお辞儀する
+  FIG.classList.remove('hardmode');
+  setTorso(r.angle, true);
+  if (G.kind === 'online') onlineLocked();
+  setTimeout(() => {
+    if (R !== r) return;
+    setMood(moodOf(r.err), true); flash(r.err <= 1.5 ? 2 : 1);
+    sfx.lock(r.err); vib(r.err <= 1.5 ? [30, 40, 30] : 40); celebrate(r.err);
+    if (G.kind !== 'online') soloLocked();
+  }, 850);
+}
+function celebrate(err) {
+  const st = $('#g-stage');
+  if (err > 12) { st.classList.remove('shake'); void st.offsetWidth; st.classList.add('shake'); return; }
+  const n = err <= 0.5 ? 22 : err <= 1.5 ? 10 : 0;
+  const cols = ['var(--gold)', 'var(--red)', 'var(--paper)', 'var(--ok)'];
+  for (let i = 0; i < n; i++) {
+    const p = document.createElement('i'); p.className = 'cf';
+    p.style.setProperty('--x', (Math.random() * 240 - 120).toFixed(0) + 'px');
+    p.style.setProperty('--y', (-60 - Math.random() * 140).toFixed(0) + 'px');
+    p.style.setProperty('--r', (Math.random() * 720 - 360).toFixed(0) + 'deg');
+    p.style.setProperty('--c', cols[i % cols.length]);
+    st.appendChild(p); setTimeout(() => p.remove(), 1000);
+  }
+}
+
+/* ---------- 描画ループ ---------- */
+let last = {};
+const setTxt = (el, v) => { if (last[el.id] !== v) { last[el.id] = v; el.textContent = v; } };
+function frame() {
+  requestAnimationFrame(frame);
+  if (current === 's-set') { $('#se-live').textContent = sgf(r1(curAngle())) + '°'; return; }
+  if (current !== 's-game' || !R) return;
+  // 今の角度は、答え合わせまで表示しない。ここではボタンと案内文だけ更新する
+  const sm = sliderMode(), sensing = sm || Sensor.got || S.input === 'sensor';
+  const ok = $('#g-ok');
+  ok.disabled = R.phase !== 'play' || !sensing;
+  ok.style.visibility = R.phase === 'play' ? 'visible' : 'hidden';
+  let hint = '';
+  if (R.phase === 'play') {
+    if (!sensing) hint = 'センサーを確認しています…';
+    else if (sm && Sensor.denied && !Sensor.got) hint = 'センサーが許可されていないので、スライダーで角度を決めて、OKを押してください';
+    else if (G.kind === 'solo' && G.mode === 'practice') hint = '赤い影がお題の角度です。合わせてOKを押してみましょう';
+    else hint = 'お題の角度だと思うところでスマホを止めて、OKを押してください';
+  } else if (G.kind === 'online') hint = '他の人を待っています…';
+  if (last.hint !== hint) { last.hint = hint; $('#g-hint').textContent = hint; }
+  let tm = '';
+  if (R.limit && R.phase !== 'locked') tm = Math.max(0, Math.ceil((R.limit - (performance.now() - R.t0)) / 1000)) + 's';
+  setTxt($('#g-timer'), tm);
+  const sw = $('#slider-wrap');
+  if (sw.hidden === sm) sw.hidden = !sm;
+  if (sm && document.activeElement !== $('#slider')) $('#slider').value = Sensor.slider;
+}
+requestAnimationFrame(frame);
+
+/* ---------- シート ---------- */
+function sheet(html) {
+  const s = $('#g-sheet');
+  if (html == null) { s.classList.remove('on'); return; }
+  s.innerHTML = html; s.classList.add('on');
+}
+
+/* ---------- ヘッダ ---------- */
+function updateHeader() {
+  if (!G) return;
+  const bar = $('#g-bar'), box = $('#g-barbox'); box.hidden = true;
+  let l = '', r = '';
+  if (G.kind === 'online') { l = `${Math.max(G.round + 1, 1)} / ${G.rounds} 回目`; r = `合計 ${fmt(r1(G.total))}°`; }
+  else if (G.base === 'survival') { l = `STAGE ${G.round}`; r = `合計 ${fmt(r1(G.total))} / ${G.param}°`; box.hidden = false; bar.style.width = clamp(G.total / G.param * 100, 0, 100) + '%'; }
+  else if (G.base === 'nomiss') { l = `STAGE ${G.round}`; r = `許容 ±${fmt(G.param)}°　連続 ${G.cleared}`; }
+  else if (G.base === 'score') { l = `${G.mode === 'daily' ? '本番謝罪　' : ''}${G.round} / ${G.param} 回目`; r = `合計 ${fmt(r1(G.total))}°`; }
+  else { l = '練習'; r = `${G.round}回目　合計 ${fmt(r1(G.total))}°`; }
+  if (G.streak >= 2) r += `　連続◎${G.streak}`;
+  $('#g-info').textContent = l; $('#g-sub').textContent = r;
+}
+
+/* ---------- ステッパー ---------- */
+function stepper(el, o) {
+  el.innerHTML = `<button type="button" class="st-b" data-d="-1" aria-label="減らす">◀</button><div class="st-v"></div><button type="button" class="st-b" data-d="1" aria-label="増やす">▶</button>`;
+  const v = $('.st-v', el);
+  const draw = () => { v.innerHTML = `<b>${fmt(o.get())}</b><small>${o.unit}</small>`; };
+  const bump = d => { const x = clamp(r1(o.get() + d * o.step), o.min, o.max); if (x !== o.get()) { o.set(x); } draw(); };
+  $$('.st-b', el).forEach(b => {
+    const d = +b.dataset.d; let t, iv;
+    const stop = () => { clearTimeout(t); clearInterval(iv); };
+    b.addEventListener('pointerdown', e => { e.preventDefault(); bump(d); t = setTimeout(() => { iv = setInterval(() => bump(d), 90); }, 420); });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, stop));
+  });
+  draw(); return draw;
+}
+
+/* ---------- メニュー ---------- */
+const inName = $('#in-name');
+inName.value = S.name;
+inName.addEventListener('input', () => { S.name = inName.value.trim().slice(0, 10) || 'ゲスト'; save(); });
+$('#b-daily').onclick = () => { Sensor.enable(); sfx.unlock(); startSolo('daily'); };
+$('#b-solo').onclick = () => { Sensor.enable(); sfx.unlock(); buildSolo(); show('s-solo'); };
+// 本番謝罪の記録（途中でやめても、続きから再開できる）。S.dailyTop は、今日のベスト（ランキングに送る分）
+const dailyRec = () => (S.dailyRec && S.dailyRec.day === dailyId()) ? S.dailyRec : null;
+const dailyTop = () => (S.dailyTop && S.dailyTop.day === dailyId()) ? S.dailyTop : null;
+function updateMenu() {
+  const r = dailyRec(), top = dailyTop();
+  $('#b-daily-sub').textContent = r && r.log.length && !r.done ? `途中から再開できます（${r.log.length} / 5 問 終わり）`
+    : DAILY_ONCE ? (r && r.done ? `挑戦済み：合計 ${fmt(r.total)}°（また明日！）` : '5問の誤差の合計で、全国の順位がつきます')
+    : top ? `いまはテスト中：何回でも遊べます（今日のベスト ${fmt(top.total)}°）` : 'いまはテスト中：何回でも遊べます';
+}
+$('#b-online').onclick = () => { Sensor.enable(); sfx.unlock(); show('s-online'); };
+$('#b-set').onclick = () => { Sensor.enable(); show('s-set'); };
+$('#b-how').onclick = () => { $('#m-how').hidden = false; };
+$('#m-how-ok').onclick = () => { $('#m-how').hidden = true; S.seenHow = true; save(); };
+if (!S.seenHow) $('#m-how').hidden = false;
+
+/* ---------- 一人で ---------- */
+const bestKey = m => m === 'daily' ? `daily_${dailyId()}` : `${m}_${S.params[m]}`;
+function bestText(m) {
+  const b = S.best[bestKey(m)];
+  if (!b) return m === 'daily' ? `今日（${dailyId()}）はまだ挑戦していません` : '';
+  if (m === 'daily') return `今日のベスト：合計 ${fmt(b.total)}°`;
+  if (m === 'survival') return `ベスト：${b.cleared}ステージ（合計 ${fmt(b.total)}°）`;
+  if (m === 'nomiss') return `ベスト：${b.cleared}連続`;
+  if (m === 'score') return `ベスト：合計 ${fmt(b.total)}°`;
+  return '';
+}
+function buildSolo() {
+  const list = $('#so-list'); list.innerHTML = '';
+  MODES.filter(m => m.key !== 'daily').forEach(m => {
+    const c = document.createElement('div'); c.className = 'card';
+    c.innerHTML = `<h3>${m.name}</h3><p>${m.desc}</p>${m.p ? `<div class="prm"><span>${m.p.label}</span><div class="stepper"></div></div>` : ''}${m.p || m.key === 'daily' ? '<div class="best"></div>' : ''}<button class="btn primary">始める</button>`;
+    const best = $('.best', c);
+    if (m.key === 'daily') best.textContent = bestText('daily');
+    if (m.p) {
+      stepper($('.stepper', c), { min: m.p.min, max: m.p.max, step: m.p.step, unit: m.p.unit, get: () => S.params[m.key], set: x => { S.params[m.key] = x; save(); best.textContent = bestText(m.key); } });
+      best.textContent = bestText(m.key);
+    }
+    $('.btn', c).onclick = () => startSolo(m.key);
+    list.appendChild(c);
+  });
+}
+function startSolo(mode) {
+  Sensor.enable();
+  const daily = mode === 'daily', day = dailyId();
+  let rec = daily ? dailyRec() : null;
+  if (rec && rec.done) {
+    if (DAILY_ONCE) { toast('今日はもう挑戦済みです。また明日！'); openRank('today'); return; }
+    S.dailyRec = null; rec = null; save();   // テスト中は何回でも：新しく始める（今日のベストは S.dailyTop に残る）
+  }
+  G = { kind: 'solo', mode, base: daily ? 'score' : mode, param: daily ? 5 : S.params[mode], round: 0, total: 0, cleared: 0, log: [], prev: null, autoT: 0, streak: 0, day, targets: daily ? dailyTargets(day) : null };
+  if (rec && rec.log.length) {   // 途中でやめていたら、答えた分はそのまま、続きから
+    G.log = rec.log.map(l => ({ target: l.target, angle: l.angle, err: l.err }));
+    G.total = rec.total; G.round = G.log.length; G.cleared = G.log.length;
+    for (let i = G.log.length - 1; i >= 0 && G.log[i].err <= 1.5; i--) G.streak++;
+    toast(`${G.log.length}問目まで終わっています。続きからです`);
+  }
+  show('s-game'); nextSolo();
+}
+function nextSolo() {
+  clearTimeout(G.autoT);
+  G.round++;
+  const t = G.targets ? G.targets[G.round - 1] : genTarget(G.round, G.prev, G.mode === 'practice' ? 5 : 1); G.prev = t;
+  updateHeader(); $('#g-players').innerHTML = '';
+  beginRound(t, 0);
+}
+function soloLocked() {
+  const { target, angle, err } = R;
+  G.log.push({ target, angle, err }); G.total = r1(G.total + err);
+  G.streak = err <= 1.5 ? G.streak + 1 : 0;
+  let over = false, done = false;
+  if (G.base === 'survival') { if (G.total >= G.param) over = true; else G.cleared++; }
+  else if (G.base === 'nomiss') { if (err > G.param) over = true; else G.cleared++; }
+  else if (G.base === 'score') { G.cleared++; if (G.round >= G.param) done = true; }
+  if (G.mode === 'daily') {   // 1問ごとに保存する。途中でやめても続きから。5問目で、今回の記録が確定する
+    const n = G.log.length;
+    let sent = false;
+    if (done) {   // 今日のベストを更新したときだけ、ランキングに送る（送るものが無ければ「送信ずみ」扱い）
+      const top = dailyTop(), better = !top || G.total < top.total;
+      if (better) S.dailyTop = { day: G.day, total: G.total };
+      sent = !better;
+    }
+    S.dailyRec = { day: G.day, log: G.log, total: G.total, avg: n ? r1(G.total / n) : 0, done, sent };
+    save();
+  }
+  updateHeader();
+  const dirTxt = err < 0.05 ? 'ぴったり' : target < 0 ? (angle < target ? '反りすぎ' : '反りが足りない') : (angle < target ? '浅い' : '深い');
+  const end = over || done;
+  let totalLine = '';
+  if (G.base === 'survival') totalLine = `合計 ${fmt(G.total)} / ${G.param}°`;
+  else if (G.base === 'nomiss') totalLine = err > G.param ? `許容 ±${fmt(G.param)}° を超えました` : `許容 ±${fmt(G.param)}° 以内：${G.cleared}連続`;
+  else totalLine = `合計 ${fmt(G.total)}°`;
+  sheet(`${stampHTML(err)}<div class="sh-verdict">${esc(verdict(err))}</div>
+    <div class="sh-cmp"><div><small>お題</small><b>${sg(target)}°</b></div><div><small>あなた</small><b>${sgf(angle)}°</b></div><div><small>ズレ</small><b>${err.toFixed(1)}°</b></div></div>
+    <div class="sh-meta">${dirTxt === 'ぴったり' ? 'ぴったり！' : target < 0 ? `お題より${dirTxt}でした` : `お題より${dirTxt}お辞儀でした`}</div>
+    <div class="sh-total">${esc(totalLine)}</div>
+    <button class="btn primary sh-btn" id="sh-next">${end ? '結果を見る' : '次へ'}</button>`);
+  $('#sh-next').onclick = () => { end ? finishSolo(over) : nextSolo(); };
+}
+function summarySolo(over) {
+  const m = G.mode, n = G.log.length;
+  const s = { mode: m, param: G.param, cleared: G.cleared, total: G.total, rounds: n, avg: n ? r1(G.total / n) : 0 };
+  return s;
+}
+function finishSolo(over) {
+  const s = summarySolo(over);
+  let isNew = false;
+  const k = bestKey(G.mode), b = S.best[k];
+  if (G.base === 'survival') { if (!b || s.cleared > b.cleared || (s.cleared === b.cleared && s.total < b.total)) { S.best[k] = { cleared: s.cleared, total: s.total }; isNew = s.cleared > 0; } }
+  else if (G.base === 'nomiss') { if (!b || s.cleared > b.cleared) { S.best[k] = { cleared: s.cleared, total: s.total }; isNew = s.cleared > 0; } }
+  else if (G.base === 'score') { if (!b || s.total < b.total) { S.best[k] = { total: s.total }; isNew = true; } }
+  if (G.mode === 'daily') isNew = false;   // 本番謝罪は、ランキングで見せる
+  save();
+  let big = '', unit = '', title = '', sub = '';
+  if (G.base === 'survival') { big = s.cleared; unit = 'ステージ突破'; title = titleN(s.cleared); sub = `誤差の合計 ${fmt(s.total)}° / 上限 ${s.param}°`; }
+  else if (G.base === 'nomiss') { big = s.cleared; unit = '連続成功'; title = titleN(s.cleared); sub = `許容 ±${fmt(s.param)}°`; }
+  else if (G.base === 'score') { big = fmt(s.total); unit = '°'; title = titleAvg(s.avg); sub = `${G.mode === 'daily' ? G.day + '　' : ''}${s.param}回の誤差の合計（平均 ${fmt(s.avg)}°）`; }
+  else { big = fmt(s.avg); unit = '° 平均'; title = '練習終了'; sub = `${s.rounds}回　合計 ${fmt(s.total)}°`; }
+  const logs = G.log.map((l, i) => `<div><span>${i + 1}. お題 ${sg(l.target)}°</span><span>${sgf(l.angle)}°（ズレ ${l.err.toFixed(1)}）</span></div>`).join('');
+  $('#fi-body').innerHTML = `<div class="fi-title">${esc(MODE[G.mode].name)}</div>
+    <div class="fi-big">${big}<small>${unit}</small></div>
+    <div class="fi-title" style="color:var(--gold)">${esc(title)}</div>
+    ${isNew ? '<div class="fi-new">NEW RECORD</div>' : ''}
+    <div class="fi-sub">${esc(sub)}</div>
+    <div class="log">${logs || '<div>記録なし</div>'}</div>`;
+  G.shareText = shareTextSolo(s, title, G.day);
+  const lastL = G.log[G.log.length - 1] || {};
+  G.card = { title: MODE[G.mode].name + (G.mode === 'daily' ? '　' + G.day : ''), big: String(big), unit, rank: title, sub, angle: lastL.angle != null ? lastL.angle : 45, target: lastL.target != null ? lastL.target : null, grade: grade(s.avg), mood: moodOf(s.avg), dojo: G.mode !== 'daily' };
+  $('#fi-again').textContent = 'もう一度'; $('#fi-again').hidden = false; $('#fi-again').onclick = () => startSolo(G.mode);
+  const daily = G.mode === 'daily';
+  $('#fi-again').hidden = daily && DAILY_ONCE;   // 本番謝罪を1日1回にしたときだけ、「もう一度」を隠す
+  $('#fi-menu').onclick = () => { if (daily) show('s-menu'); else { buildSolo(); show('s-solo'); } };
+  $('#fi-menu').textContent = daily ? 'メニューへ' : 'モード選択へ';
+  $('#fi-rank').hidden = true; $('#fi-rankopen').hidden = !daily;
+  show('s-final');
+  if (daily) dailyAfter(G, s);
+}
+function shareTextSolo(s, title, day) {
+  const name = MODE[s.mode].name;
+  if (s.mode === 'daily') return `【謝罪道場】本番謝罪 ${day}：誤差の合計 ${fmt(s.total)}°（平均 ${fmt(s.avg)}°）！称号：${title}`;
+  if (s.mode === 'survival') return `【謝罪道場】${name}（上限${s.param}°）で${s.cleared}ステージ突破！称号：${title}`;
+  if (s.mode === 'nomiss') return `【謝罪道場】${name}（許容±${fmt(s.param)}°）で${s.cleared}連続成功！称号：${title}`;
+  if (s.mode === 'score') return `【謝罪道場】${name}（${s.param}回）の誤差の合計は${fmt(s.total)}°！称号：${title}`;
+  return `【謝罪道場】練習中`;
+}
+async function shareText(text) {
+  const url = location.href.split('#')[0];
+  try { if (navigator.share) { await navigator.share({ title: '謝罪道場', text, url }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(text + ' ' + url); toast('コピーしました'); } catch (e) { toast('コピーできませんでした'); }
+}
+/* ---------- 結果カード（画像） ---------- */
+function rr(x, X, Y, w, h, r) { x.beginPath(); x.moveTo(X + r, Y); x.arcTo(X + w, Y, X + w, Y + h, r); x.arcTo(X + w, Y + h, X, Y + h, r); x.arcTo(X, Y + h, X, Y, r); x.arcTo(X, Y, X + w, Y, r); x.closePath(); }
+function cardFigure(x, hx, hy, s, angle, ghost, dojo) {
+  x.save(); x.translate(hx, hy); x.scale(s, s);
+  x.strokeStyle = dojo ? 'rgba(60,35,15,.4)' : 'rgba(246,241,231,.25)'; x.lineWidth = 2; x.beginPath(); x.moveTo(-140, 84); x.lineTo(330, 84); x.stroke();
+  if (dojo) {   // 道着：白い道着、黒帯、はだし、鉢巻
+    x.fillStyle = '#f1eee6'; x.strokeStyle = '#b8b2a2'; x.lineWidth = 1.6; rr(x, -11, 0, 22, 76, 9); x.fill(); x.stroke();
+    x.fillStyle = '#f1c9a5'; rr(x, -15, 74, 44, 10, 5); x.fill();
+  } else {      // サラリーマン：スーツと革靴、足元にビジネスバッグ
+    x.strokeStyle = '#2a2f3a'; x.lineWidth = 3; x.beginPath(); x.moveTo(-49, 59); x.lineTo(-49, 51); x.lineTo(-31, 51); x.lineTo(-31, 59); x.stroke();
+    x.fillStyle = '#2a2f3a'; rr(x, -58, 58, 36, 25, 4); x.fill();
+    x.fillStyle = '#c9a227'; rr(x, -44, 66, 8, 5, 1); x.fill();
+    x.fillStyle = '#2b3a63'; rr(x, -11, 0, 22, 76, 9); x.fill();
+    x.fillStyle = '#0b1124'; rr(x, -15, 74, 44, 10, 5); x.fill();
+  }
+  if (ghost != null) {   // お題の赤い影
+    x.save(); x.rotate(ghost * Math.PI / 180); x.lineJoin = 'round';
+    x.strokeStyle = '#fff'; x.lineWidth = 8; rr(x, -17, -70, 34, 74, 15); x.stroke(); x.beginPath(); x.arc(0, -90, 19, 0, 7); x.stroke();
+    x.fillStyle = 'rgba(224,36,94,.26)'; x.strokeStyle = '#e0245e'; x.lineWidth = 3.2;
+    rr(x, -17, -70, 34, 74, 15); x.fill(); x.stroke(); x.beginPath(); x.arc(0, -90, 19, 0, 7); x.fill(); x.stroke(); x.restore();
+  }
+  x.save(); x.rotate(angle * Math.PI / 180);
+  if (dojo) {
+    x.fillStyle = '#f3f0e8'; x.strokeStyle = '#b8b2a2'; x.lineWidth = 1.6; rr(x, -17, -70, 34, 74, 15); x.fill(); x.stroke();
+    x.lineCap = 'round'; x.lineWidth = 2; x.beginPath(); x.moveTo(3, -72); x.lineTo(17, -50); x.lineTo(13, -24); x.moveTo(8, -72); x.lineTo(17, -58); x.stroke();
+    x.fillStyle = '#1b1b1f'; rr(x, -18, -20, 36, 9, 2); x.fill(); rr(x, 13, -22, 9, 13, 2); x.fill();
+    x.beginPath(); x.moveTo(16, -9); x.lineTo(21, 8); x.lineTo(25, 6); x.lineTo(22, -9); x.closePath(); x.fill();
+    x.fillStyle = '#e6e2d6'; x.strokeStyle = '#b8b2a2'; x.lineWidth = 1.2; rr(x, -8, -60, 15, 56, 7); x.fill(); x.stroke();
+  } else {
+    x.fillStyle = '#223a73'; rr(x, -17, -70, 34, 74, 15); x.fill();
+    x.fillStyle = '#f6f1e7'; rr(x, 9, -62, 8, 46, 3); x.fill();
+    x.fillStyle = '#d62839'; rr(x, 12.5, -56, 4, 30, 1.5); x.fill();
+    x.fillStyle = '#2f4e99'; rr(x, -8, -60, 15, 56, 7); x.fill();
+    x.strokeStyle = '#3b82f6'; x.lineWidth = 1.6; x.beginPath(); x.moveTo(1, -73); x.lineTo(9, -45); x.stroke();
+    x.fillStyle = '#f6f1e7'; rr(x, 5, -46, 9, 12, 1.5); x.fill(); x.fillStyle = '#3b82f6'; rr(x, 5, -46, 9, 4, 1.5); x.fill();
+    x.fillStyle = '#f6f1e7'; x.beginPath(); x.moveTo(3, -74); x.lineTo(17, -69); x.lineTo(13, -57); x.lineTo(6, -67); x.closePath(); x.fill();
+  }
+  x.fillStyle = '#f1c9a5'; x.beginPath(); x.arc(0, -90, 19, 0, 7); x.fill();
+  x.fillStyle = '#e2b48c'; x.beginPath(); x.ellipse(-7, -87, 3.2, 4.4, 0, 0, 7); x.fill();
+  x.fillStyle = '#2b2433'; x.beginPath(); x.arc(0, -90, 19, Math.PI * 1.05, Math.PI * 1.95); x.closePath(); x.fill();
+  if (dojo) {   // 鉢巻
+    x.fillStyle = '#f6f6f6'; x.strokeStyle = '#c9c9c9'; x.lineWidth = 1;
+    x.beginPath(); x.moveTo(-18, -95); x.quadraticCurveTo(0, -107, 18, -95); x.lineTo(18.5, -89); x.quadraticCurveTo(0, -101, -18.5, -89); x.closePath(); x.fill(); x.stroke();
+    x.beginPath(); x.moveTo(-18, -93); x.lineTo(-29, -85); x.lineTo(-24, -82); x.lineTo(-17, -89); x.closePath(); x.fill(); x.stroke();
+  }
+  x.fillStyle = '#1a1a2a'; x.beginPath(); x.arc(10, -87, 2, 0, 7); x.fill();
+  x.restore(); x.restore();
+}
+function cardCustomer(x, cx, gy, s, mood, dojo) {
+  x.save(); x.translate(cx, gy); x.scale(s, s);
+  if (dojo) {   // 道場の先生：白い道着、黒い袴と帯、白いあごひげ
+    x.fillStyle = '#20232c'; x.beginPath(); x.moveTo(-22, -104); x.lineTo(22, -104); x.lineTo(32, -8); x.lineTo(-32, -8); x.closePath(); x.fill();
+    x.strokeStyle = '#3c404c'; x.lineWidth = 1.4; x.beginPath(); x.moveTo(-10, -100); x.lineTo(-14, -8); x.moveTo(0, -100); x.lineTo(0, -8); x.moveTo(10, -100); x.lineTo(14, -8); x.stroke();
+    x.fillStyle = '#f3f0e8'; x.strokeStyle = '#b8b2a2'; x.lineWidth = 1.6; rr(x, -24, -150, 48, 50, 19); x.fill(); x.stroke();
+    x.lineCap = 'round'; x.lineWidth = 2; x.beginPath(); x.moveTo(-8, -148); x.lineTo(0, -114); x.lineTo(8, -148); x.stroke();
+    x.fillStyle = '#1b1b1f'; rr(x, -24, -106, 48, 9, 2); x.fill();
+    x.fillStyle = '#e6e2d6'; x.strokeStyle = '#b8b2a2'; x.lineWidth = 1.2; rr(x, -36, -126, 56, 15, 7.5); x.fill(); x.stroke();
+  } else {
+  x.fillStyle = '#262b36'; rr(x, -10, -82, 20, 74, 8); x.fill();
+  x.fillStyle = '#0b1124'; rr(x, -24, -10, 40, 10, 5); x.fill();
+  x.fillStyle = '#2d3340'; rr(x, -24, -150, 48, 76, 19); x.fill();
+  x.fillStyle = '#f6f1e7'; rr(x, -6, -144, 12, 44, 4); x.fill();
+  x.fillStyle = '#c9a227'; rr(x, -2.5, -137, 5, 32, 2); x.fill();
+  x.fillStyle = '#f6f1e7'; x.beginPath(); x.moveTo(-19, -133); x.lineTo(-11, -135); x.lineTo(-10, -128); x.lineTo(-19, -127); x.closePath(); x.fill();
+  x.fillStyle = '#e9b44c'; x.beginPath(); x.arc(17, -132, 2.6, 0, 7); x.fill();
+  x.fillStyle = '#3a4252'; rr(x, -36, -126, 56, 15, 7.5); x.fill();
+  }
+  const skin = mood === 'furious' ? '#e0624f' : mood === 'angry' ? '#ef9b84' : '#f1c9a5';
+  x.fillStyle = '#e2b48c'; x.beginPath(); x.ellipse(-21, -168, 3, 5, 0, 0, 7); x.ellipse(21, -168, 3, 5, 0, 0, 7); x.fill();
+  x.fillStyle = skin; x.beginPath(); x.arc(0, -170, 21, 0, 7); x.fill();
+  x.fillStyle = '#e5e7eb'; x.beginPath(); x.arc(0, -170, 21, Math.PI * 1.03, Math.PI * 1.97); x.closePath(); x.fill();
+  x.beginPath(); x.ellipse(-20.5, -163, 3, 7, 0, 0, 7); x.ellipse(20.5, -163, 3, 7, 0, 0, 7); x.fill();
+  if (mood === 'happy' || mood === 'delight') { x.fillStyle = 'rgba(240,138,138,.5)'; x.beginPath(); x.arc(-15, -158, 4, 0, 7); x.arc(15, -158, 4, 0, 7); x.fill(); }
+  x.fillStyle = '#2a2020'; x.beginPath(); x.arc(-8, -167, 2.3, 0, 7); x.moveTo(10.3, -167); x.arc(8, -167, 2.3, 0, 7); x.fill();
+  if (!dojo) { x.strokeStyle = '#3a3f4a'; x.lineWidth = 1.7; x.beginPath(); x.arc(-8, -167, 6.5, 0, 7); x.moveTo(14.5, -167); x.arc(8, -167, 6.5, 0, 7); x.moveTo(-1.5, -167); x.lineTo(1.5, -167); x.stroke(); }
+  if (dojo) { x.fillStyle = '#eef0f4'; x.strokeStyle = '#b9bcc4'; x.lineWidth = 1.2; x.beginPath(); x.moveTo(-11, -152); x.quadraticCurveTo(0, -120, 11, -152); x.quadraticCurveTo(0, -138, -11, -152); x.closePath(); x.fill(); x.stroke(); }
+  x.fillStyle = '#d8dbe0'; x.beginPath(); x.moveTo(-11, -158); x.quadraticCurveTo(-5, -161.5, 0, -159.5); x.quadraticCurveTo(5, -161.5, 11, -158); x.quadraticCurveTo(5, -154, 0, -156); x.quadraticCurveTo(-5, -154, -11, -158); x.fill();
+  x.lineCap = 'round'; x.strokeStyle = dojo ? '#8d93a0' : '#3b3b44'; x.lineWidth = dojo ? 4.4 : 3.2; x.beginPath();
+  if (mood === 'delight') { x.moveTo(-14, -178); x.quadraticCurveTo(-9, -183, -3, -179); x.moveTo(3, -179); x.quadraticCurveTo(9, -183, 14, -178); }
+  else if (mood === 'happy') { x.moveTo(-14, -175); x.quadraticCurveTo(-9, -179, -3, -176); x.moveTo(3, -176); x.quadraticCurveTo(9, -179, 14, -175); }
+  else if (mood === 'angry') { x.moveTo(-15, -180); x.lineTo(-3, -173); x.moveTo(15, -180); x.lineTo(3, -173); }
+  else if (mood === 'furious') { x.moveTo(-16, -183); x.lineTo(-3, -172); x.moveTo(16, -183); x.lineTo(3, -172); }
+  else { x.moveTo(-14, -176); x.lineTo(-3, -176); x.moveTo(3, -176); x.lineTo(14, -176); }
+  x.stroke();
+  x.strokeStyle = '#2a2020'; x.lineWidth = 2.4; x.beginPath();
+  if (mood === 'happy') { x.moveTo(-6, -152); x.quadraticCurveTo(0, -144, 6, -152); }
+  else if (mood === 'angry') { x.moveTo(-6, -146); x.quadraticCurveTo(0, -153, 6, -146); }
+  else if (mood === 'wait') { x.moveTo(-5, -150); x.lineTo(5, -150); }
+  x.stroke();
+  if (mood === 'delight') { x.fillStyle = '#6b1f24'; x.beginPath(); x.moveTo(-7, -153); x.quadraticCurveTo(0, -139, 7, -153); x.closePath(); x.fill(); }
+  if (mood === 'furious') { x.fillStyle = '#6b1f24'; x.beginPath(); x.ellipse(0, -148, 7, 6.5, 0, 0, 7); x.fill(); x.strokeStyle = '#fff'; x.lineWidth = 2; x.beginPath(); x.moveTo(-4.5, -152); x.lineTo(4.5, -152); x.stroke(); }
+  if (mood === 'angry' || mood === 'furious') { x.strokeStyle = '#d62839'; x.lineWidth = 3; x.beginPath(); x.moveTo(20, -192); x.lineTo(26, -196); x.moveTo(22, -185); x.lineTo(30, -185); x.moveTo(20, -178); x.lineTo(26, -174); x.stroke(); }
+  x.restore();
+}
+function drawCard(c) {
+  const W = 1080, H = 1350, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const x = cv.getContext('2d');
+  const serif = '"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif', sans = '"Hiragino Sans","Yu Gothic UI","Noto Sans JP",sans-serif';
+  const bg = x.createLinearGradient(0, 0, 0, H); if (c.dojo) { bg.addColorStop(0, '#6e4426'); bg.addColorStop(1, '#2e1b0d'); } else { bg.addColorStop(0, '#1f3568'); bg.addColorStop(1, '#0d1630'); }
+  x.fillStyle = bg; x.fillRect(0, 0, W, H);
+  x.strokeStyle = 'rgba(246,241,231,.22)'; x.lineWidth = 3; rr(x, 36, 36, W - 72, H - 72, 40); x.stroke();
+  x.textAlign = 'center'; x.textBaseline = 'alphabetic';
+  x.fillStyle = '#f6f1e7'; x.font = `700 92px ${serif}`; x.fillText('謝罪道場', W / 2, 196);
+  x.fillStyle = '#e9b44c'; x.font = `600 40px ${sans}`; x.fillText(c.title, W / 2, 266);
+  cardFigure(x, 360, 735, 2, c.angle, c.target, c.dojo);
+  cardCustomer(x, 800, 903, 2, c.mood, c.dojo);
+  // ハンコ
+  x.save(); x.translate(915, 250); x.rotate(-14 * Math.PI / 180);
+  x.strokeStyle = '#d62839'; x.fillStyle = '#d62839'; x.lineWidth = 8; x.beginPath(); x.arc(0, 0, 76, 0, 7); x.stroke();
+  x.lineWidth = 2.5; x.beginPath(); x.arc(0, 0, 66, 0, 7); x.stroke();
+  x.font = `700 ${c.grade.label.length > 2 ? 34 : 44}px ${serif}`; x.textBaseline = 'middle'; x.fillText(c.grade.label, 0, 2); x.restore();
+  // 数字
+  x.textBaseline = 'alphabetic'; x.textAlign = 'left';
+  x.font = `700 210px ${serif}`; const wb = x.measureText(c.big).width;
+  x.font = `600 54px ${sans}`; const wu = x.measureText(c.unit).width;
+  const sx = (W - (wb + 18 + wu)) / 2;
+  x.fillStyle = '#e9b44c'; x.font = `700 210px ${serif}`; x.fillText(c.big, sx, 1130);
+  x.fillStyle = '#f6f1e7'; x.font = `600 54px ${sans}`; x.fillText(c.unit, sx + wb + 18, 1130);
+  x.textAlign = 'center';
+  x.fillStyle = '#f6f1e7'; x.font = `700 62px ${serif}`; x.fillText(c.rank, W / 2, 1210);
+  x.fillStyle = '#9aa6c2'; x.font = `500 34px ${sans}`; x.fillText(c.sub, W / 2, 1268);
+  x.fillStyle = 'rgba(246,241,231,.55)'; x.font = `500 28px ${sans}`; x.fillText('スマホを傾けて、誠意の角度を測ろう', W / 2, 1316);
+  return cv;
+}
+const cardBlob = c => new Promise((res, rej) => { try { drawCard(c).toBlob(b => b ? res(b) : rej(new Error('blob')), 'image/png'); } catch (e) { rej(e); } });
+function openCard(blob, text) {
+  const u = URL.createObjectURL(blob);
+  $('#card-img').src = u; $('#card-dl').href = u;
+  $('#card-copy').onclick = async () => { try { await navigator.clipboard.writeText(text); toast('コピーしました'); } catch (e) { toast('コピーできませんでした'); } };
+  $('#m-card').hidden = false;
+}
+$('#card-close').onclick = () => { $('#m-card').hidden = true; };
+async function shareResult() {
+  const text = (G && G.shareText) || '謝罪道場', url = location.href.split('#')[0];
+  let blob = null;
+  try { if (G && G.card) blob = await cardBlob(G.card); } catch (e) {}
+  if (!blob) return shareText(text);
+  try {
+    const file = new File([blob], 'shazai.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: text + ' ' + url }); return; }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  openCard(blob, text + ' ' + url);
+}
+$('#fi-share').onclick = () => shareResult();
+$('#g-quit').onclick = () => {
+  if (!confirm(G && G.mode === 'daily' ? 'やめても、今日は後で続きから再開できます。やめますか？' : 'やめますか？')) return;
+  if (G && G.kind === 'online') leaveRoom();
+  else { clearTimeout(G && G.autoT); R = null; if (G && G.mode === 'daily') show('s-menu'); else { buildSolo(); show('s-solo'); } }
+};
+
+/* ---------- 今日の謝罪ランキング ----------
+   全員共通のランキングは、Firebase Realtime Database のURLを入れると有効になります（手順は「ランキング設定.md」）。
+   空のままなら、この端末の記録だけが表示されます。 */
+const RANK = { url: '' };
+const rankOn = () => !!RANK.url;
+function myUid() {
+  if (!S.uid) { S.uid = Array.from(crypto.getRandomValues(new Uint8Array(10)), b => b.toString(16).padStart(2, '0')).join(''); save(); }
+  return S.uid;
+}
+const RANK_N = 300;   // 順位をつける人数（上位300人まで）
+// 登録できたら true。すでに登録済み（書き換え禁止）なら 'exists'。つながらなければ false
+async function rankSubmit(day, total, avg) {
+  try {
+    const r = await fetch(`${RANK.url}/ranking/${day}/${myUid()}.json`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: S.name, total, avg, ts: Date.now() }) });
+    return r.ok ? true : (r.status === 401 || r.status === 403 ? 'exists' : false);
+  } catch (e) { return false; }
+}
+async function rankFetch(day) {
+  const r = await fetch(`${RANK.url}/ranking/${day}.json?orderBy=%22total%22&limitToFirst=${RANK_N}`, { cache: 'no-store' });
+  if (!r.ok) throw new Error('rank ' + r.status);
+  const j = (await r.json()) || {};
+  return Object.entries(j).map(([id, v]) => ({ id, name: String((v && v.name) || '').slice(0, 10) || '名無し', total: +(v && v.total), ts: +(v && v.ts) || 0 }))
+    .filter(x => isFinite(x.total)).sort((a, b) => a.total - b.total || a.ts - b.ts);
+}
+function rankRow(x, i, me) { return `<li class="${me ? 'me' : ''}"><span class="n">${i + 1}</span><span class="nm">${esc(x.name)}</span><span class="tt">${fmt(r1(x.total))}°</span></li>`; }
+let rankView = 'today';   // 'today'（今日）か、'yesterday'（昨日）
+const yesterdayId = () => new Date(Date.now() + 9 * 3600 * 1000 - 24 * 3600 * 1000).toISOString().slice(0, 10);
+async function openRank(view) { rankView = view === 'yesterday' ? 'yesterday' : 'today'; show('s-rank'); await loadRank(); }
+// 記録が終わっているのに、まだ送れていないときは、ここで送り直す
+async function ensureSent() {
+  const rec = dailyRec();
+  if (!rankOn() || !rec || !rec.done || rec.sent) return;
+  const r = await rankSubmit(rec.day, rec.total, rec.avg);
+  if (r) { rec.sent = true; save(); }
+}
+async function loadRank() {
+  const isToday = rankView === 'today', day = isToday ? dailyId() : yesterdayId(), label = isToday ? '今日' : '昨日';
+  const body = $('#rk-body'), rec = dailyRec(), play = $('#rk-play');
+  $('#rk-day').textContent = isToday
+    ? `${day}　${DAILY_ONCE ? '1日1回・' : 'いまはテスト中：何回でも挑戦できます・'}毎日0時（日本時間）に新しくなります`
+    : `昨日（${day}）のランキング`;
+  $('#rk-yday').textContent = isToday ? '昨日のランキングを見る' : '今日のランキングを見る';
+  if (DAILY_ONCE && rec && rec.done) { play.textContent = '今日は挑戦ずみ（また明日！）'; play.disabled = true; }
+  else if (rec && rec.log.length && !rec.done) { play.textContent = `続きから挑戦する（${rec.log.length} / 5 問 終わり）`; play.disabled = false; }
+  else { play.textContent = DAILY_ONCE ? '本番に挑戦する（1日1回）' : '本番に挑戦する（いまは何回でもOK）'; play.disabled = false; }
+  // この端末にある、その日の記録（ベスト）
+  const dayRec = S.dailyRec && S.dailyRec.day === day && S.dailyRec.done ? S.dailyRec : null;
+  const dayTop = S.dailyTop && S.dailyTop.day === day ? S.dailyTop : null;
+  const mineTotal = dayTop ? dayTop.total : dayRec ? dayRec.total : null;
+  if (!rankOn()) {
+    body.innerHTML = `<div class="rk-msg">全国のランキングは、準備中です。<br>${mineTotal != null ? `この端末の${label}の記録：<b style="color:var(--gold)">${fmt(mineTotal)}°</b>` : `${label}はまだ挑戦していません`}</div>`;
+    return;
+  }
+  body.innerHTML = '<div class="rk-msg">読み込み中…</div>';
+  try {
+    if (isToday) await ensureSent();
+    const list = await rankFetch(day), id = myUid(), at = list.findIndex(x => x.id === id);
+    if (!list.length) { body.innerHTML = isToday ? '<div class="rk-msg">まだ誰も挑戦していません。<br>一番乗りになろう！</div>' : '<div class="rk-msg">昨日の記録は、ありません。</div>'; return; }
+    const rows = list.slice(0, 50).map((x, i) => rankRow(x, i, x.id === id));
+    if (at >= 50) rows.push('<li class="rk-gap" style="background:none;padding:0;justify-content:center">・・・</li>', rankRow(list[at], at, true));
+    const head = `<div class="rk-msg" style="padding:0 0 10px">${label}の参加者：${list.length}人${list.length >= RANK_N ? '以上' : ''}${at >= 0 ? `　あなた：<b style="color:var(--gold)">${at + 1}位</b>` : ''}</div>`;
+    body.innerHTML = head + `<ul class="rank" style="padding:0;margin:0">${rows.join('')}</ul>` + (at < 0 && mineTotal != null ? `<div class="rk-msg">あなたは${RANK_N}位圏外です（${label}の記録 ${fmt(mineTotal)}°）</div>` : '');
+  } catch (e) { body.innerHTML = '<div class="rk-msg">ランキングにつながりませんでした。<br>「更新する」をもう一度押してください。</div>'; }
+}
+// 5問が終わったら、記録を1回だけ登録して、順位を結果画面に出す
+async function dailyAfter(g, s) {
+  const el = $('#fi-rank'); el.hidden = false;
+  if (!rankOn()) { el.textContent = '全国のランキングは、準備中です（記録はこの端末に残っています）'; return; }
+  el.textContent = 'ランキングに登録しています…';
+  try {
+    await ensureSent();
+    const day = g.day, list = await rankFetch(day), at = list.findIndex(x => x.id === myUid());
+    if (G !== g) return;
+    el.innerHTML = at >= 0 ? `今日のランキング：<b>${at + 1}</b>位 / ${list.length}人${list.length >= RANK_N ? '以上' : ''}` : `今日のランキング：${RANK_N}位圏外`;
+    if (at >= 0) { g.shareText = `【謝罪道場】本番謝罪 ${day}：${at + 1}位！誤差の合計 ${fmt(s.total)}°`; if (g.card) g.card.sub = `今日のランキング ${at + 1}位 / ${list.length}人（${fmt(s.total)}°）`; }
+  } catch (e) { if (G === g) el.textContent = 'ランキングにつながりませんでした。後でランキング画面を開くと、送り直します'; }
+}
+$('#b-rank').onclick = () => openRank('today');
+$('#b-rank-y').onclick = () => openRank('yesterday');
+$('#fi-rankopen').onclick = () => openRank('today');
+$('#rk-reload').onclick = () => loadRank();
+$('#rk-yday').onclick = () => { rankView = rankView === 'today' ? 'yesterday' : 'today'; loadRank(); };
+$('#rk-play').onclick = () => { Sensor.enable(); sfx.unlock(); startSolo('daily'); };
+/* ---------- 設定 ---------- */
+function refreshSet() {
+  $$('#se-input button').forEach(b => b.classList.toggle('on', b.dataset.v === S.input));
+  $('#se-mute').checked = S.mute;
+  $('#se-state').textContent = Sensor.denied ? 'センサーの許可がありません。上のボタンから許可するか、スライダー操作に切り替えてください。'
+    : Sensor.got ? 'センサーは動いています。'
+    : !window.isSecureContext ? 'このページはHTTPSではないため、センサーが使えない場合があります。'
+    : Sensor.listening ? 'センサーの値を待っています…（PCではスライダー操作になります）' : 'センサーはまだ有効ではありません。';
+  $('#se-zero-state').textContent = S.zero > 0 ? `今の0°は、スマホを立てた状態から ${fmt(S.zero)}° 傾けた位置です。` : '0°は、スマホをまっすぐ立てた位置です。';
+}
+$('#se-zero').onclick = () => {
+  if (sliderMode() || !Sensor.got) return toast('センサーが動いているときだけ使えます');
+  if (Sensor.angle > 45) return toast('もう少しスマホを立ててから押してください');
+  S.zero = r1(Math.max(0, Sensor.angle)); save(); refreshSet(); toast('この持ち方を0°にしました');
+};
+$('#se-zero-reset').onclick = () => { S.zero = 0; save(); refreshSet(); };
+$$('#se-input button').forEach(b => b.onclick = () => { S.input = b.dataset.v; save(); refreshSet(); });
+$('#se-mute').onchange = e => { S.mute = e.target.checked; save(); };
+$('#se-enable').onclick = async () => { await Sensor.enable(); refreshSet(); setTimeout(refreshSet, 1700); };
+
+/* ---------- オンライン ---------- */
+const Net = { peer: null, isHost: false, code: '', conns: new Map(), hostConn: null, myId: 'h', players: [], rounds: S.rounds, blind: false, inGame: false, joined: false, seq: 0 };
+let H = null;
+const hasPeer = () => { if (typeof Peer === 'undefined') { toast('通信ライブラリを読み込めませんでした。ネット接続を確認してください'); return false; } return true; };
+const genCode = () => { const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; for (let i = 0; i < 4; i++) s += c[randInt(0, c.length - 1)]; return s; };
+function netReset() {
+  try { Net.peer && Net.peer.destroy(); } catch (e) {}
+  Object.assign(Net, { peer: null, isHost: false, code: '', hostConn: null, players: [], inGame: false, joined: false, myId: 'h', seq: 0 });
+  Net.conns.clear();
+  if (H) { clearTimeout(H.timer); clearTimeout(H.next); H = null; }
+}
+function bcast(m) { Net.conns.forEach(c => { try { c.conn.open && c.conn.send(m); } catch (e) {} }); }
+
+let drawRounds;
+drawRounds = stepper($('#lb-rounds'), { min: 1, max: 30, step: 1, unit: '回', get: () => Net.rounds, set: x => { Net.rounds = x; S.rounds = x; save(); hostLobby(); } });
+
+$('#on-code').addEventListener('input', e => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); });
+$('#on-create').onclick = () => { Sensor.enable(); sfx.unlock(); hostCreate(); };
+$('#on-join').onclick = () => {
+  const c = $('#on-code').value.trim().toUpperCase();
+  if (c.length !== 4) return toast('4文字のコードを入れてください');
+  Sensor.enable(); sfx.unlock(); guestJoin(c);
+};
+
+function hostCreate() {
+  if (!hasPeer()) return;
+  netReset(); busy('部屋を作っています…');
+  let done = false;
+  const make = n => {
+    const code = genCode();
+    let peer;
+    try { peer = new Peer('shazai-' + code, { debug: 0 }); } catch (e) { idle(); return toast('通信を開始できませんでした'); }
+    const to = setTimeout(() => { if (!done) { done = true; idle(); toast('サーバーに接続できませんでした'); netReset(); } }, 12000);
+    peer.on('open', () => {
+      if (done) return; done = true; clearTimeout(to);
+      Net.peer = peer; Net.isHost = true; Net.code = code; Net.myId = 'h'; Net.rounds = S.rounds; Net.blind = false;
+      Net.players = [{ id: 'h', name: S.name }];
+      idle(); drawRounds(); renderLobby(); show('s-lobby');
+    });
+    peer.on('connection', hostOnConn);
+    peer.on('disconnected', () => { try { peer.reconnect(); } catch (e) {} });
+    peer.on('error', e => {
+      if (e.type === 'unavailable-id' && n < 5 && !done) { clearTimeout(to); try { peer.destroy(); } catch (_) {} make(n + 1); }
+      else if (!done) { done = true; clearTimeout(to); idle(); toast('部屋を作れませんでした (' + e.type + ')'); netReset(); }
+      else toast('通信エラー: ' + e.type);
+    });
+  };
+  make(0);
+}
+function hostOnConn(conn) {
+  conn.on('data', m => hostOnMsg(conn, m));
+  conn.on('close', () => hostDrop(conn));
+  conn.on('error', () => hostDrop(conn));
+}
+function uniqueName(n) { n = n || 'ゲスト'; let name = n, i = 2; while (Net.players.some(p => p.name === name)) name = n.slice(0, 8) + i++; return name; }
+function hostOnMsg(conn, m) {
+  if (!m || typeof m !== 'object') return;
+  if (m.t === 'join') {
+    if (Net.inGame) { conn.send({ t: 'reject', why: 'ゲーム中です。終わるまで少し待ってください' }); setTimeout(() => conn.close(), 400); return; }
+    if (Net.players.length >= 8) { conn.send({ t: 'reject', why: '満員です（最大8人）' }); setTimeout(() => conn.close(), 400); return; }
+    if (conn._pid) return;
+    const id = 'p' + (++Net.seq), name = uniqueName(String(m.name || '').slice(0, 10));
+    conn._pid = id; Net.conns.set(id, { conn, id });
+    Net.players.push({ id, name });
+    conn.send({ t: 'welcome', id });
+    hostLobby();
+  } else if (m.t === 'lock') { if (conn._pid) hostOnLock(conn._pid, m.n, m.angle); }
+  else if (m.t === 'bye') hostDrop(conn);
+}
+function hostDrop(conn) {
+  const id = conn._pid; if (!id) return;
+  conn._pid = null; Net.conns.delete(id); Net.players = Net.players.filter(p => p.id !== id);
+  hostLobby(); if (H) hostCheckAll();
+}
+function hostLobby() {
+  const m = { t: 'lobby', players: Net.players, rounds: Net.rounds, blind: Net.blind };
+  bcast(m); renderLobby(); if (current === 's-game') renderPlayers();
+}
+function renderLobby() {
+  $('#lb-code').textContent = Net.code || '----';
+  $('#lb-count').textContent = Net.players.length + '人';
+  $('#lb-list').innerHTML = Net.players.map(p => `<li class="${p.id === Net.myId ? 'me' : ''}"><span class="av">${esc(p.name.slice(0, 1))}</span>${esc(p.name)}${p.id === 'h' ? '<em>ホスト</em>' : ''}</li>`).join('');
+  $('#lb-host').hidden = !Net.isHost; $('#lb-guest').hidden = Net.isHost;
+  $('#lb-ginfo').textContent = `${Net.rounds}回勝負`;
+  $('#lb-start').textContent = Net.players.length < 2 ? 'ゲームスタート（一人でもOK）' : 'ゲームスタート';
+}
+$('#lb-share').onclick = () => {
+  const url = location.href.split('#')[0] + '#r=' + Net.code;
+  const text = `謝罪道場で勝負しよう！部屋コード：${Net.code}`;
+  (async () => {
+    try { if (navigator.share) { await navigator.share({ title: '謝罪道場', text, url }); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+    try { await navigator.clipboard.writeText(text + ' ' + url); toast('招待リンクをコピーしました'); } catch (e) { toast('コードを友達に伝えてください：' + Net.code); }
+  })();
+};
+$('#lb-leave').onclick = () => leaveRoom();
+
+function guestJoin(code) {
+  if (!hasPeer()) return;
+  netReset(); busy('部屋に入っています…');
+  let done = false;
+  const fail = msg => { if (done) return; done = true; clearTimeout(to); idle(); toast(msg); netReset(); };
+  const to = setTimeout(() => fail('つながりませんでした。コードや通信環境を確認してください'), 14000);
+  let peer;
+  try { peer = new Peer({ debug: 0 }); } catch (e) { return fail('通信を開始できませんでした'); }
+  Net.peer = peer;
+  peer.on('error', e => fail(e.type === 'peer-unavailable' ? 'その部屋は見つかりません' : '通信エラー (' + e.type + ')'));
+  peer.on('open', () => {
+    const conn = peer.connect('shazai-' + code, { reliable: true });
+    Net.hostConn = conn;
+    conn.on('open', () => conn.send({ t: 'join', name: S.name }));
+    conn.on('data', m => {
+      if (!m || typeof m !== 'object') return;
+      if (m.t === 'welcome') { if (done) return; done = true; clearTimeout(to); Net.myId = m.id; Net.joined = true; Net.code = code; idle(); return; }
+      if (m.t === 'reject') return fail(m.why || '入れませんでした');
+      onNetMsg(m);
+    });
+    conn.on('close', () => { if (Net.joined) { toast('ホストとの接続が切れました'); leaveRoom(true); } else fail('接続できませんでした'); });
+  });
+}
+function leaveRoom(silent) {
+  if (Net.isHost) bcast({ t: 'closed' });
+  else if (Net.hostConn && Net.hostConn.open) { try { Net.hostConn.send({ t: 'bye' }); } catch (e) {} }
+  const hadGame = G && G.kind === 'online';
+  setTimeout(() => {}, 0);
+  netReset(); R = null; if (hadGame) G = null; sheet(null);
+  show('s-menu');
+}
+
+/* 全員共通のメッセージ処理（ホスト自身も通る） */
+function onNetMsg(m) {
+  switch (m.t) {
+    case 'lobby':
+      Net.players = m.players; Net.rounds = m.rounds; Net.blind = m.blind;
+      if (!Net.isHost) { renderLobby(); if (current !== 's-game' && current !== 's-final') show('s-lobby'); else if (current === 's-game') renderPlayers(); }
+      break;
+    case 'start':
+      Net.inGame = true; Net.players = m.players;
+      G = { kind: 'online', targets: m.targets, rounds: m.rounds, blind: m.blind, round: -1, total: 0, streak: 0, locked: [] };
+      R = null; sheet(null); updateHeader(); renderPlayers();
+      $('#g-tname').textContent = '準備'; $('#g-tnum').textContent = '--'; setTargetArc(0);
+      show('s-game');
+      break;
+    case 'round':
+      if (!G || G.kind !== 'online') return;
+      G.round = m.n; G.locked = []; updateHeader(); renderPlayers();
+      beginRound(G.targets[m.n], ONLINE_LIMIT);
+      break;
+    case 'progress':
+      if (!G || G.kind !== 'online' || m.n !== G.round) return;
+      G.locked = m.locked || []; renderPlayers();
+      break;
+    case 'result': onlineResult(m); break;
+    case 'end': onlineEnd(m); break;
+    case 'closed': toast('ホストが部屋を閉じました'); leaveRoom(true); break;
+  }
+}
+function renderPlayers() {
+  if (!G || G.kind !== 'online') return;
+  $('#g-players').innerHTML = Net.players.map(p => `<span class="${G.locked.includes(p.id) ? 'ok' : ''}">${G.locked.includes(p.id) ? '✓ ' : ''}${esc(p.name)}</span>`).join('');
+}
+function onlineLocked() {
+  if (Net.isHost) hostOnLock('h', G.round, R.angle);
+  else if (Net.hostConn && Net.hostConn.open) Net.hostConn.send({ t: 'lock', n: G.round, angle: R.angle });
+}
+function onlineResult(m) {
+  if (!G || G.kind !== 'online') return;
+  const rows = [...m.rows].sort((a, b) => a.total - b.total);
+  const me = m.rows.find(r => r.id === Net.myId);
+  if (me) { G.total = me.total; G.streak = me.err <= 1.5 && !me.miss ? G.streak + 1 : 0; updateHeader(); }
+  const tr = rows.map((r, i) => `<tr class="${r.id === Net.myId ? 'me' : ''}"><td>${i + 1}</td><td>${esc(r.name)}</td><td class="${r.miss ? 'miss' : ''}">${r.miss ? '時間切れ' : sgf(r.angle) + '°'}</td><td>${r.err.toFixed(1)}</td><td>${fmt(r.total)}</td></tr>`).join('');
+  sheet(`${me ? stampHTML(me.err) : ''}<div class="sh-verdict">${m.n + 1} / ${G.rounds} 回目　お題 ${sg(m.target)}°</div>
+    <table class="tbl"><thead><tr><th>順</th><th>名前</th><th>角度</th><th>ズレ</th><th>合計</th></tr></thead><tbody>${tr}</tbody></table>
+    <div class="sh-meta">${m.last ? 'まもなく最終結果です…' : 'まもなく次のお題です'}</div>`);
+}
+function onlineEnd(m) {
+  Net.inGame = false;
+  $('#fi-rank').hidden = true; $('#fi-rankopen').hidden = true;
+  const rk = m.ranking;
+  const lis = rk.map((r, i) => `<li class="${r.id === Net.myId ? 'me' : ''}"><span class="n">${i + 1}</span><span class="nm">${esc(r.name)}</span><span class="tt">${fmt(r.total)}°</span></li>`).join('');
+  const winner = rk[0];
+  const mine = rk.findIndex(r => r.id === Net.myId) + 1;
+  $('#fi-body').innerHTML = `<div class="fi-title">最終結果</div>
+    <div class="fi-title" style="color:var(--gold);font-size:30px">${winner ? esc(winner.name) + ' の勝ち！' : ''}</div>
+    <div class="fi-sub">誤差の合計が少ない順（${G ? G.rounds : ''}回勝負）</div>
+    <ul class="rank" style="padding:0;margin:0">${lis}</ul>`;
+  if (G) {
+    const tot = (rk[mine - 1] || {}).total || 0, avg = G.rounds ? tot / G.rounds : tot;
+    G.shareText = `【謝罪道場】オンライン対戦 ${rk.length}人中${mine}位！（誤差の合計 ${fmt(tot)}°）`;
+    G.card = { title: 'オンライン対戦', big: String(mine), unit: `位 / ${rk.length}人`, rank: mine === 1 ? '優勝' : '次は勝つ', sub: `誤差の合計 ${fmt(tot)}°（${G.rounds}回勝負）`, angle: G.lastAngle != null ? G.lastAngle : 45, target: G.lastTarget != null ? G.lastTarget : null, grade: grade(avg), mood: moodOf(avg), dojo: true };
+  }
+  $('#fi-again').textContent = '部屋に戻る'; $('#fi-again').hidden = false;
+  $('#fi-again').onclick = () => { R = null; sheet(null); renderLobby(); show('s-lobby'); };
+  $('#fi-menu').textContent = '退室してメニューへ'; $('#fi-menu').onclick = () => leaveRoom();
+  sheet(null); R = null;
+  show('s-final');
+}
+
+/* ホスト進行 */
+function hostStart() {
+  if (Net.inGame || !Net.isHost) return;
+  Net.inGame = true;
+  const n = Net.rounds, targets = [];
+  for (let i = 1; i <= n; i++) targets.push(genTarget(i, targets[i - 2]));
+  H = { n: -1, targets, locks: {}, totals: {}, timer: 0, next: 0, resolving: false };
+  Net.players.forEach(p => { H.totals[p.id] = 0; });
+  const m = { t: 'start', targets, rounds: n, blind: Net.blind, players: Net.players };
+  bcast(m); onNetMsg(m);
+  H.next = setTimeout(hostNextRound, 1500);
+}
+$('#lb-start').onclick = () => { Sensor.enable(); hostStart(); };
+function hostNextRound() {
+  if (!H) return;
+  H.n++; H.locks = {}; H.resolving = false;
+  const m = { t: 'round', n: H.n };
+  bcast(m); onNetMsg(m);
+  clearTimeout(H.timer); H.timer = setTimeout(hostResolve, ONLINE_LIMIT + 6000);
+}
+function hostOnLock(id, n, angle) {
+  if (!H || H.resolving || n !== H.n || H.locks[id] != null) return;
+  const a = +angle; H.locks[id] = isFinite(a) ? clamp(a, 0, 130) : 0;
+  const m = { t: 'progress', n, locked: Object.keys(H.locks) };
+  bcast(m); onNetMsg(m);
+  hostCheckAll();
+}
+function hostCheckAll() { if (H && !H.resolving && H.n >= 0 && Net.players.every(p => H.locks[p.id] != null)) hostResolve(); }
+function hostResolve() {
+  if (!H || H.resolving) return;
+  H.resolving = true; clearTimeout(H.timer);
+  const target = H.targets[H.n];
+  const rows = Net.players.map(p => {
+    const a = H.locks[p.id], angle = a == null ? 0 : a, err = r1(Math.abs(angle - target));
+    H.totals[p.id] = r1((H.totals[p.id] || 0) + err);
+    return { id: p.id, name: p.name, angle: r1(angle), err, total: H.totals[p.id], miss: a == null };
+  });
+  const last = H.n >= H.targets.length - 1;
+  const m = { t: 'result', n: H.n, target, rows, last };
+  bcast(m); onNetMsg(m);
+  H.next = setTimeout(() => { if (!H) return; last ? hostEnd() : hostNextRound(); }, last ? 4500 : 5500);
+}
+function hostEnd() {
+  const ranking = Net.players.map(p => ({ id: p.id, name: p.name, total: H.totals[p.id] || 0 })).sort((a, b) => a.total - b.total);
+  clearTimeout(H.timer); clearTimeout(H.next); H = null;
+  const m = { t: 'end', ranking };
+  bcast(m); onNetMsg(m);
+}
+
+initAds();
+pushAds('s-menu');
+updateMenu();
+
+/* ---------- 招待リンクで来たとき ---------- */
+(() => {
+  const mm = location.hash.match(/r=([A-Za-z0-9]{4})/);
+  if (mm) { $('#on-code').value = mm[1].toUpperCase(); show('s-online'); }
+})();
+})();
+</script>
+</body>
+</html>
