@@ -170,6 +170,18 @@ svg .tarc{fill:none;stroke:#e0245e;stroke-width:4.2;stroke-linecap:round}
 .bgs{display:none}
 .g-stage svg.sc-dojo .bgs.dojo,.g-stage svg.sc-office .bgs.office{display:inline}
 .g-stage svg.sc-office .ground{stroke:rgba(30,40,60,.25)}
+/* 道（サバイバル／ノーミス）：背景は3種類のどれか。相手は、1ステージごとに変わる */
+.g-stage svg.sc-shop .bgs.st-shop,.g-stage svg.sc-res .bgs.st-res,.g-stage svg.sc-river .bgs.st-river{display:inline}
+.g-stage svg.sc-street .ground{stroke:rgba(30,40,60,.25)}
+.g-stage svg.sc-street .cust,.g-stage svg.sc-street .mannequin{display:none}
+.stopp{transform-box:fill-box;transform-origin:50% 100%}
+.stopp.enter{animation:stEnter .9s ease-out}
+.stopp.leave{animation:stLeave .8s ease-in forwards}
+.stopp.hop{animation:hop .55s ease-out}.stopp.jump{animation:hop .6s ease-out 2}
+.stopp.fume{animation:fume .5s linear}.stopp.rage{animation:fume .42s linear 2}
+@keyframes stEnter{0%{transform:translateX(230px)}55%{transform:translateX(0)}65%{transform:translateY(-5px)}100%{transform:none}}
+@keyframes stLeave{0%{transform:none}18%{transform:translateY(-7px)}100%{transform:translateX(230px)}}
+#s-game.th-street .g-hint{text-shadow:0 1px 3px rgba(0,0,0,.75),0 0 8px rgba(0,0,0,.45)}
 .g-stage svg.sc-dojo .ground{stroke:rgba(30,18,8,.4)}
 .g-stage svg.sc-dojo .mq{stroke:#8b7a5c;stroke-width:1.8}
 /* 道場：サラリーマンは、道着（白い道着、黒帯、はだし、鉢巻）になる */
@@ -285,7 +297,10 @@ svg .vsp text{fill:#1b2236;font:700 9.5px var(--sans);text-anchor:middle}
 .fi-big .deg{font-size:.42em;line-height:1;vertical-align:top;position:relative;top:.07em;margin-left:3px;color:inherit}   /* ° は、数字の右上に、小さく添える */
 /* 本番謝罪の結果は、会社っぽく：明るい壁とカーペット、評価書（紙） */
 #s-final.office{--dim:#5a6a86;--line:rgba(27,34,54,.22);background:linear-gradient(#cfd8e5 0 64%,#a5b2c7 64% 65.5%,#58677f 65.5%);color:#1b2236}
-#s-final.office .fi-rank{background:#fff;color:#1b2236;box-shadow:0 2px 8px rgba(20,30,55,.2)}
+#s-final.office .fi-rank,#s-final.street .fi-rank{background:#fff;color:#1b2236;box-shadow:0 2px 8px rgba(20,30,55,.2)}
+#s-final.street{--dim:#5a6a86;--line:rgba(27,34,54,.22);color:#1b2236;background-color:#6e737d;background-size:cover;background-position:center top;background-repeat:no-repeat}
+#s-final.street .btn.ghost{background:rgba(27,34,54,.8);color:#f6f1e7;border:0}
+.doc-trail{padding:0 16px 10px;text-align:center;font-size:12.5px;color:#5a6a86}
 #s-final.office .fi-rank b{color:#a3261f}
 #s-final.office .btn.ghost{color:#f6f1e7;border-color:rgba(246,241,231,.6)}
 .doc{background:#fbfaf6;color:#1b2236;border-radius:6px;box-shadow:0 8px 22px rgba(20,30,55,.3);overflow:hidden}
@@ -295,7 +310,9 @@ svg .vsp text{fill:#1b2236;font:700 9.5px var(--sans);text-anchor:middle}
 .doc-meta{display:flex;justify-content:space-between;gap:10px;padding:8px 16px;font-size:13px;color:#5a6a86;border-bottom:1px solid rgba(27,34,54,.12)}
 .doc-score{position:relative;text-align:center;padding:14px 16px 4px}
 .doc-score small{display:block;font-size:13px;color:#5a6a86;letter-spacing:.24em}
-#s-final.office .doc .fi-big{color:#1b2a4e;font-size:80px;margin-top:2px}
+.doc-score .fi-big small{display:inline;letter-spacing:0;margin-left:4px}
+#s-final.office .doc .fi-big,#s-final.street .doc .fi-big{color:#1b2a4e;font-size:80px;margin-top:2px}
+.doc .fi-big small{color:#33405a;font-size:24px}
 .doc-stamp{position:absolute;right:8px;top:16px;width:68px;height:68px;border:3.5px solid #d62839;border-radius:50%;color:#d62839;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15;font-family:var(--serif);font-weight:700;font-size:16px;letter-spacing:.02em;transform:rotate(-14deg);opacity:.92}
 .doc-line{text-align:center;padding:2px 16px 12px;font-size:14px;color:#33405a}
 .doc-line b{font-family:var(--serif);font-size:26px;color:#a3261f;margin:0 4px;letter-spacing:.06em}
@@ -702,7 +719,7 @@ let current = 's-menu';
 let onScreen = () => {};   // 画面が替わったときの後始末（ランクマッチの待機をやめる、通信を切る）。あとで設定する
 function show(id) {
   current = id;
-  if (id !== 's-final') $('#s-final').classList.remove('office');   // 会社っぽい結果は、本番謝罪の結果だけ
+  if (id !== 's-final') { $('#s-final').classList.remove('office', 'street'); $('#s-final').style.backgroundImage = ''; }   // 会社っぽい結果は本番謝罪だけ。道の背景は、サバイバル／ノーミスだけ
   onScreen(id);
   $$('.screen').forEach(s => s.classList.toggle('on', s.id === id));
   wake(id === 's-game');
@@ -727,6 +744,209 @@ const tatamiPath = () => {   // 畳の縁（濃い緑）。奥行きがあるよ
   return d;
 };
 const carpetPath = () => { let d = ''; for (let x = -600; x < 900; x += 40) d += `M${x} 232V700`; for (let y = 232; y < 700; y += 26) d += `M-600 ${y}H900`; return d; };
+/* STREET:BEGIN  道（路上）の背景と、謝罪相手のキャラの絵。足元が (0,0)。元は tools/street_lib.js（直したら、tools/port_street を回して入れ直す） */
+const STREET = (() => {
+const SK = '#f1c9a5', SK2 = '#e2b48c', INK = '#2a2020';
+const C = (cx, cy, r, f, x = '') => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${f}" ${x}/>`;
+const E = (cx, cy, rx, ry, f, x = '') => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${f}" ${x}/>`;
+const RC = (x, y, w, h, rx, f, x2 = '') => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${f}" ${x2}/>`;
+const PP = (d, f, x = '') => `<path d="${d}" fill="${f}" ${x}/>`;
+const SS = (d, st, w = 2, x = '') => `<path d="${d}" fill="none" stroke="${st}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" ${x}/>`;
+const eyes = (cy, r, f = INK) => C(-r * .38, cy + r * .08, 2.3 * r / 21, f) + C(r * .38, cy + r * .08, 2.3 * r / 21, f);
+const mouth = (cy, r, mood = 'wait') => {
+  const my = cy + r * .55;
+  if (mood === 'happy') return SS(`M${-r * .3} ${my - 2} Q0 ${my + 7} ${r * .3} ${my - 2}`, INK, 2.2);
+  if (mood === 'angry') return SS(`M${-r * .28} ${my + 2} Q0 ${my - 5} ${r * .28} ${my + 2}`, INK, 2.2);
+  if (mood === 'open') return PP(`M${-r * .28} ${my - 3} Q0 ${my + 9} ${r * .28} ${my - 3}Z`, '#6b1f24');
+  return SS(`M${-r * .22} ${my} H${r * .22}`, INK, 2.2);
+};
+const blush = (cy, r) => C(-r * .72, cy + r * .38, 4, '#f08a8a', 'opacity=".5"') + C(r * .72, cy + r * .38, 4, '#f08a8a', 'opacity=".5"');
+const shadow = w => E(0, 0, w, 4.5, 'rgba(0,0,0,.18)');
+
+/* 人：足元(0,0)。o: legH, bodyH, bodyW, head, skin */
+function human(o) {
+  const L = o.legH ?? 74, B = o.bodyH ?? 76, W = o.bodyW ?? 48, R = o.head ?? 21, sk = o.skin ?? SK;
+  const bt = -(L + B), hy = bt - (R - 2), hw = W / 2;
+  let s = shadow(W * .7);
+  if (o.behind) s += o.behind({ L, B, W, R, bt, hy });
+  if (o.skirt) s += o.skirt({ L, B, W, R, bt, hy });
+  else {
+    s += RC(-13, -(L + 8), 11, L, 5, o.pants) + RC(2, -(L + 8), 11, L, 5, o.pants);
+    s += RC(-17, -9, 16, 9, 4, o.shoes ?? '#3a2e28') + RC(1, -9, 16, 9, 4, o.shoes ?? '#3a2e28');
+  }
+  s += RC(-hw, bt, W, B, W * .38, o.top);
+  if (o.topDeco) s += o.topDeco({ L, B, W, R, bt, hy });
+  s += RC(-hw - 11, bt + 8, 12, B * .8, 6, o.sleeve ?? o.top) + RC(hw - 1, bt + 8, 12, B * .8, 6, o.sleeve ?? o.top);
+  s += C(-hw - 5, bt + 8 + B * .8, 5.5, sk) + C(hw + 5, bt + 8 + B * .8, 5.5, sk);
+  if (o.behindHead) s += o.behindHead({ R, hy });
+  s += E(-R, hy + 2, 3, 5, SK2) + E(R, hy + 2, 3, 5, SK2) + C(0, hy, R, sk);
+  if (o.hair) s += o.hair({ R, hy });
+  const mo = o.mood ?? 'wait';
+  s += (mo === 'angry' ? C(0, hy, R, 'rgba(224,70,60,.28)') : '') + eyes(hy, R) + (o.blush || mo === 'happy' ? blush(hy, R) : '') + mouth(hy, R, mo);
+  if (mo === 'angry') s += SS(`M${-R * .7} ${hy - R * .36} L${-R * .12} ${hy - R * .1} M${R * .7} ${hy - R * .36} L${R * .12} ${hy - R * .1}`, '#3b3b44', 2.8) + SS(`M${R * .9} ${hy - R * .9} l5 -4 M${R * .95} ${hy - R * .6} l7 -1`, '#d62839', 2.4);
+  if (o.front) s += o.front({ L, B, W, R, bt, hy });
+  return s;
+}
+const hairShort = (col, ext = 0) => ({ R, hy }) => PP(`M${-R - 1} ${hy + 3} A${R + 1} ${R + 1} 0 0 1 ${R + 1} ${hy + 3} Q${R * .5} ${hy - R * .45 + ext} 0 ${hy - R * .4 + ext} Q${-R * .5} ${hy - R * .45 + ext} ${-R - 1} ${hy + 3}Z`, col);
+
+const KARA = `<pattern id="kara" width="16" height="16" patternUnits="userSpaceOnUse"><rect width="16" height="16" fill="#2f7a43"/><path d="M8 8 m-1 0 a1 1 0 1 1 2 0 a2.6 2.6 0 1 1 -5.2 0 a4.2 4.2 0 1 1 8.4 0 a5.8 5.8 0 1 1 -11.6 0" fill="none" stroke="#a9dcb4" stroke-width="1.4"/></pattern>`;
+const CHARS = {
+  /* ---- 普通の人（序盤）---- */
+  oji: (m = 'wait') => human({ mood: m, pants: '#6b5a48', top: '#6f9460', topDeco: ({ bt }) => PP(`M-6 ${bt} L0 ${bt + 14} L6 ${bt}Z`, '#f6f1e7'), shoes: '#4a3a2a',
+    hair: ({ R, hy }) => PP(`M${-R} ${hy - 2} Q${-R - 8} ${hy + 4} ${-R + 2} ${hy + 14} Q${-R + 4} ${hy + 4} ${-R + 3} ${hy - 4}Z`, '#e9eaee') + PP(`M${R} ${hy - 2} Q${R + 8} ${hy + 4} ${R - 2} ${hy + 14} Q${R - 4} ${hy + 4} ${R - 3} ${hy - 4}Z`, '#e9eaee')
+      + SS(`M-12 ${hy - R + 3} Q0 ${hy - R - 2} 12 ${hy - R + 3}`, '#dcdde2', 3) + SS(`M-14 ${hy - 8} H-4 M4 ${hy - 8} H14`, '#e8e8ee', 4),
+    front: ({ R, hy }) => SS(`M${-R * .4} ${hy + 1.5} a${R * .31} ${R * .31} 0 1 0 .1 0M${R * .4} ${hy + 1.5} a${R * .31} ${R * .31} 0 1 0 .1 0M-3 ${hy + 1.5} H3`, '#3a3f4a', 1.7)
+      + PP(`M-11 ${hy + 12} Q-5 ${hy + 8.5} 0 ${hy + 10.5} Q5 ${hy + 8.5} 11 ${hy + 12} Q5 ${hy + 16} 0 ${hy + 14} Q-5 ${hy + 16} -11 ${hy + 12}Z`, '#e6e8ee')
+      + SS('M33 -78 L37 0', '#7a5a3a', 3.5) + SS('M33 -78 Q33 -90 43 -87', '#7a5a3a', 3.5) }),
+  oba: (m = 'wait') => human({ mood: m, top: '#8a6aa8', sleeve: '#7a5a98', blush: true,
+    skirt: ({ L }) => PP(`M-22 ${-L} L22 ${-L} L28 -18 L-28 -18Z`, '#5b4a78') + RC(-11, -20, 9, 14, 3, '#e6d8c0') + RC(2, -20, 9, 14, 3, '#e6d8c0') + RC(-16, -9, 15, 9, 4, '#4a3a2a') + RC(1, -9, 15, 9, 4, '#4a3a2a'),
+    topDeco: ({ bt }) => C(0, bt + 8, 2.4, '#f6f1e7') + C(-6, bt + 9, 2.4, '#f6f1e7') + C(6, bt + 9, 2.4, '#f6f1e7'),
+    behindHead: ({ R, hy }) => C(0, hy - R - 6, 9, '#c9cbd2'),
+    hair: ({ R, hy }) => hairShort('#c9cbd2')({ R, hy }),
+    front: ({ R, hy, bt, B }) => SS(`M${-R * .4} ${hy + 1.5} a${R * .31} ${R * .31} 0 1 0 .1 0M${R * .4} ${hy + 1.5} a${R * .31} ${R * .31} 0 1 0 .1 0M-3 ${hy + 1.5} H3`, '#8a5a6a', 1.6)
+      + RC(30, bt + B * .8 + 4, 20, 17, 3, '#8b5a3a') + SS(`M33 ${bt + B * .8 + 4} q7 -9 14 0`, '#6b3f1d', 2.2) }),
+  onii: (m = 'wait') => human({ mood: m, pants: '#3a5a8a', top: '#e9833a', shoes: '#f4f4f4',
+    topDeco: ({ bt }) => PP(`M-12 ${bt} Q0 ${bt + 12} 12 ${bt} L12 ${bt + 4} Q0 ${bt + 16} -12 ${bt + 4}Z`, '#d46f28') + SS(`M-3 ${bt + 12} v10 M3 ${bt + 12} v10`, '#f6f1e7', 1.6),
+    hair: ({ R, hy }) => hairShort('#2b2433', -2)({ R, hy }) + PP(`M-14 ${hy - 14} l4 -9 l4 8 l4 -10 l4 9 l4 -9 l3 11Z`, '#2b2433'),
+    front: ({ R, hy, bt, B }) => SS(`M${-R - 2} ${hy} Q${-R - 4} ${hy - R} 0 ${hy - R - 3} Q${R + 4} ${hy - R} ${R + 2} ${hy}`, '#2f3340', 3.5) + RC(-R - 6, hy - 6, 7, 13, 3, '#2f3340') + RC(R - 1, hy - 6, 7, 13, 3, '#2f3340') }),
+  onee: (m = 'wait') => human({ mood: m, pants: '#2f3a5a', top: '#e88aa0', blush: true,
+    behind: ({ R, hy }) => RC(-R - 5, hy - R + 2, 2 * R + 10, R * 2 + 36, 14, '#6b4a3a'),
+    skirt: ({ L }) => PP(`M-24 ${-L - 4} L24 ${-L - 4} L30 -36 L-30 -36Z`, '#2f3a5a') + RC(-11, -40, 9, 30, 4, '#f1c9a5') + RC(2, -40, 9, 30, 4, '#f1c9a5') + RC(-15, -14, 14, 14, 4, '#5a3a2e') + RC(1, -14, 14, 14, 4, '#5a3a2e'),
+    hair: ({ R, hy }) => hairShort('#6b4a3a', 2)({ R, hy }) + PP(`M${-R} ${hy - 6} Q0 ${hy - 2} ${R * .3} ${hy - R + 2} Q${-R * .4} ${hy - R + 2} ${-R} ${hy - 6}Z`, '#6b4a3a'),
+    front: ({ bt, W, B }) => SS(`M${-W / 2 + 4} ${bt + 2} L${W / 2 - 4} ${bt + B * .85}`, '#c9a227', 2.4) + RC(W / 2 - 6, bt + B * .85 - 6, 18, 16, 4, '#c9a227') }),
+  boy: (m = 'wait') => human({ mood: m, legH: 38, bodyH: 46, bodyW: 38, head: 24, pants: '#3a6aa8', top: '#f2c94c', shoes: '#f4f4f4', blush: true,
+    behind: ({ bt, W }) => RC(-W / 2 - 5, bt + 4, W + 10, 36, 7, '#3f8f5a'),
+    hair: ({ R, hy }) => PP(`M${-R - 1} ${hy + 1} A${R + 1} ${R + 1} 0 0 1 ${R + 1} ${hy + 1} Q0 ${hy - 6} ${-R - 1} ${hy + 1}Z`, '#d62839') + RC(-R - 8, hy - 4, R + 10, 5, 2.5, '#b01f2d') }),
+  girl: (m = 'wait') => human({ mood: m, legH: 38, bodyH: 46, bodyW: 38, head: 24, pants: '#f6f1e7', top: '#e04a6a', shoes: '#c92a4a', blush: true,
+    skirt: ({ L }) => PP(`M-19 ${-L} L19 ${-L} L27 -22 L-27 -22Z`, '#e04a6a') + RC(-9, -24, 7, 16, 3, '#f6f1e7') + RC(2, -24, 7, 16, 3, '#f6f1e7') + RC(-14, -9, 13, 9, 4, '#c92a4a') + RC(1, -9, 13, 9, 4, '#c92a4a'),
+    behindHead: ({ R, hy }) => C(-R - 5, hy + 8, 7, '#2b2433') + C(R + 5, hy + 8, 7, '#2b2433'),
+    hair: ({ R, hy }) => hairShort('#2b2433', 4)({ R, hy }) + C(-R + 3, hy - R + 5, 4.4, '#f2c94c') + C(R - 3, hy - R + 5, 4.4, '#f2c94c') }),
+
+  /* ---- ツッコミ枠（4人目から）---- */
+  dog: () => shadow(34) + SS('M30 -40 Q46 -46 42 -64', '#c98a45', 7) + RC(-24, -26, 8, 26, 4, '#c98a45') + RC(-10, -26, 8, 26, 4, '#c98a45') + RC(14, -26, 8, 26, 4, '#c98a45') + RC(26, -26, 8, 26, 4, '#c98a45')
+    + E(2, -38, 34, 21, '#d9a35f') + E(-4, -30, 22, 11, '#f6efe0') + PP('M-44 -62 L-36 -84 L-26 -66Z', '#b07a3a') + PP('M-24 -64 L-12 -84 L-8 -62Z', '#b07a3a')
+    + C(-34, -56, 19, '#d9a35f') + E(-48, -50, 11, 8, '#f6efe0') + E(-56, -54, 3.6, 2.8, '#2a2020') + C(-38, -60, 2.6, '#2a2020') + SS('M-46 -45 q6 4 12 0', '#2a2020', 1.6) + PP('M-44 -44 q3 12 7 0Z', '#ef7f8f'),
+  cat: () => shadow(24) + SS('M16 -8 Q44 -10 40 -44 Q38 -56 30 -52', '#8a8f9a', 7) + E(0, -28, 21, 28, '#a3a9b5') + E(0, -22, 12, 18, '#e9ecf1')
+    + RC(-20, -8, 12, 8, 4, '#a3a9b5') + RC(8, -8, 12, 8, 4, '#a3a9b5') + PP('M-20 -64 L-18 -90 L-5 -74Z', '#a3a9b5') + PP('M20 -64 L18 -90 L5 -74Z', '#a3a9b5') + C(0, -62, 19, '#a3a9b5')
+    + SS('M-8 -90 v6 M0 -92 v8 M8 -90 v6', '#7d828d', 2.4, 'transform="translate(0 6)"') + SS('M-13 -62 h8 M5 -62 h8', '#2a2020', 2.4) + PP('M-2 -55 h4 l-2 3Z', '#ef7f8f') + SS('M-24 -54 l-12 -2 M-24 -50 l-12 2 M24 -54 l12 -2 M24 -50 l12 2', '#444', 1),
+  baby: () => shadow(26) + E(0, -20, 24, 18, '#f6f1e7') + RC(-18, -40, 36, 26, 12, '#f8d96a') + RC(-30, -36, 12, 22, 6, '#f8d96a') + RC(18, -36, 12, 22, 6, '#f8d96a')
+    + C(-24, -17, 6, SK) + C(24, -17, 6, SK) + E(-10, -4, 8, 5, SK) + E(10, -4, 8, 5, SK) + C(0, -58, 23, SK) + SS('M-4 -80 q4 -9 8 0', '#6b4a3a', 2.6)
+    + eyes(-58, 23) + blush(-58, 23) + C(0, -45, 5, '#f08ab0') + SS('M-5 -45 h10', '#d46a92', 1.5) + E(-25, -60, 3, 5, SK2) + E(25, -60, 3, 5, SK2),
+  /* 泥棒：唐草模様の頬かむりと、大きな唐草のふろしき（古い漫画の泥棒） */
+  thief: (m = 'wait') => {
+    const SW = '#9aa876', PANTS = '#7a5a3c', K = 'url(#kara)';
+    const leg = (x, ang) => `<g transform="rotate(${ang} ${x + 6} -80)">` + RC(x, -82, 12, 74, 5, PANTS) + RC(x - 3, -9, 19, 9, 4, '#4a3a2a') + `</g>`;
+    const eyesL = m === 'happy' ? SS('M-15 -172 Q-10 -179 -5 -172 M5 -172 Q10 -179 15 -172', INK, 2.4) : m === 'angry' ? SS('M-15 -175 L-5 -171 M15 -175 L5 -171', INK, 2.6) : SS('M-14 -176 L-6 -172 L-14 -168 M14 -176 L6 -172 L14 -168', INK, 2.4);
+    const brows = SS(m === 'angry' ? 'M-17 -188 L-4 -180 M17 -188 L4 -180' : 'M-16 -185 L-4 -179 M16 -185 L4 -179', '#1f3a28', 3.2);
+    const grin = m === 'angry' ? SS('M-6 -158 Q0 -163 6 -158', INK, 2) : PP('M-7 -161 Q0 -154 7 -161 Q0 -158 -7 -161Z', '#6b1f24');
+    return shadow(34)
+      // 背中のふろしき（唐草）
+      + E(46, -112, 31, 37, K, 'stroke="#1f5a31" stroke-width="2"') + PP('M30 -142 Q36 -160 54 -150 Q50 -140 44 -136Z', K, 'stroke="#1f5a31" stroke-width="2"') + SS('M30 -126 Q10 -134 -4 -126', '#1f5a31', 5)
+      + leg(-20, 20) + leg(8, -24)
+      + `<g transform="rotate(-5 0 -78)">`
+      + RC(-26, -152, 52, 76, 20, SW)
+      + RC(-42, -148, 14, 48, 7, SW, 'transform="rotate(-25 -35 -148)"') + RC(28, -148, 14, 48, 7, SW, 'transform="rotate(25 35 -148)"')
+      + PP('M-17 -150 L17 -150 L0 -126Z', K, 'stroke="#1f5a31" stroke-width="1.5"') + PP('M-5 -126 L5 -126 L9 -116 L0 -121 L-9 -116Z', K)
+      + C(-17, -104, 7.5, SK) + C(17, -104, 7.5, SK) + SS('M-21 -107 h8 M13 -107 h8', SK2, 1.4)
+      + C(0, -178, 29, K, 'stroke="#1f5a31" stroke-width="2"') + E(0, -172, 19, 17.5, SK) + PP('M-17 -150 Q0 -140 17 -150 L12 -158 Q0 -150 -12 -158Z', K)
+      + E(-19, -170, 3, 5, SK2) + E(19, -170, 3, 5, SK2)
+      + eyesL + brows + E(0, -168, 2.8, 2.2, SK2)
+      + PP('M-20 -163 Q-11 -172 0 -166 Q11 -172 20 -163 Q11 -157 0 -161 Q-11 -157 -20 -163Z', '#1f5a31')
+      + grin
+      + `</g>`;
+  },
+  ninja: (m = 'wait') => human({ mood: m, pants: '#23232b', top: '#2f2f3a', shoes: '#23232b', sleeve: '#2f2f3a', skin: '#2f2f3a',
+    topDeco: ({ bt, W, B }) => RC(-W / 2, bt + B * .55, W, 7, 0, '#d62839') + PP(`M${W / 2 - 2} ${bt + B * .55 + 2} l16 8 l-6 10Z`, '#d62839'),
+    behind: ({ bt, W, hy }) => SS(`M${-W / 2 - 6} ${bt + 6} L${W / 2 + 14} ${hy - 22}`, '#8a8f9a', 3.5) + SS(`M${-W / 2 - 6} ${bt + 6} l-5 5`, '#5a3a2a', 4),
+    hair: ({ R, hy }) => RC(-R, hy - 3, 2 * R, 11, 5, SK2) + RC(-R, hy - 3, 2 * R, 11, 5, 'none', 'stroke="#2f2f3a" stroke-width="0"'),
+    front: ({ R, hy }) => E(-R * .4, hy + 2, 3.2, 2.2, '#fff') + E(R * .4, hy + 2, 3.2, 2.2, '#fff') + SS(`M${-R + 3} ${hy - 5} L${-2} ${hy - 1}M${R - 3} ${hy - 5} L${2} ${hy - 1}`, '#2f2f3a', 2.6) + PP(`M${R - 2} ${hy - 4} l18 -6 l-4 12Z`, '#d62839') }),
+  santa: (m = 'wait') => human({ mood: m, pants: '#c92a2a', top: '#d62839', shoes: '#2a2a2a', topDeco: ({ bt, W, B }) => RC(-W / 2, bt + B * .58, W, 8, 0, '#2a2a2a') + RC(-5, bt + B * .58 - 1, 10, 10, 2, '#e9b44c') + RC(-W / 2 + 22, bt, 4, B, 0, '#f6f1e7'),
+    sleeve: '#c92a2a', blush: true,
+    hair: ({ R, hy }) => PP(`M${-R - 2} ${hy - 4} Q${-R} ${hy - R - 14} ${R * .2} ${hy - R - 20} Q${R} ${hy - R - 8} ${R + 2} ${hy - 4}Z`, '#d62839') + RC(-R - 3, hy - 8, 2 * R + 6, 8, 4, '#f6f1e7') + C(R * .4, hy - R - 20, 5, '#f6f1e7'),
+    front: ({ R, hy, bt, B, W }) => PP(`M${-R} ${hy + 4} Q${-R - 2} ${hy + R + 14} 0 ${hy + R + 12} Q${R + 2} ${hy + R + 14} ${R} ${hy + 4} Q0 ${hy + 12} ${-R} ${hy + 4}Z`, '#f6f1e7') + E(0, hy + 7, 5, 3, '#e9b0a0') + E(W / 2 + 12, bt + B * .55, 17, 21, '#7a5a3a') + SS(`M${W / 2 + 4} ${bt + B * .55 - 12} q8 -10 14 0`, '#5a3a1a', 3) }),
+  alien: () => shadow(26) + RC(-6, -30, 5, 30, 2, '#8fd16a') + RC(1, -30, 5, 30, 2, '#8fd16a') + E(-9, -3, 9, 4, '#6fb04a') + E(9, -3, 9, 4, '#6fb04a')
+    + RC(-18, -80, 36, 56, 16, '#c8d0dc') + RC(-30, -76, 12, 40, 6, '#c8d0dc') + RC(18, -76, 12, 40, 6, '#c8d0dc') + C(-24, -34, 5, '#8fd16a') + C(24, -34, 5, '#8fd16a')
+    + C(0, -62, 6, '#e9b44c') + SS('M-18 -62 h36', '#9aa5b5', 1.6)
+    + SS('M-8 -118 L-14 -140 M8 -118 L14 -140', '#8fd16a', 3) + C(-14, -142, 4.6, '#f6e07a') + C(14, -142, 4.6, '#f6e07a')
+    + E(0, -100, 24, 26, '#8fd16a') + E(-10, -100, 8, 11, '#1a2a1a', 'transform="rotate(18 -10 -100)"') + E(10, -100, 8, 11, '#1a2a1a', 'transform="rotate(-18 10 -100)"') + C(-12, -103, 2, '#fff') + C(8, -103, 2, '#fff') + SS('M-5 -84 q5 4 10 0', '#2a5a2a', 1.8),
+  ghost: () => E(0, 0, 22, 4, 'rgba(0,0,0,.14)') + `<g opacity=".93">` + PP('M-28 -22 Q-28 -118 0 -118 Q28 -118 28 -22 L28 -10 Q22 -20 16 -10 Q10 -20 4 -10 Q-2 -20 -8 -10 Q-14 -20 -20 -10 Q-26 -20 -28 -10Z', '#f4f6fb')
+    + PP('M-26 -62 Q-44 -74 -38 -90 Q-30 -76 -24 -72Z', '#f4f6fb') + PP('M26 -62 Q44 -74 38 -90 Q30 -76 24 -72Z', '#f4f6fb') + `</g>`
+    + E(-9, -78, 4.4, 7, '#2a2a3a') + E(9, -78, 4.4, 7, '#2a2a3a') + E(0, -60, 5, 7.5, '#2a2a3a') + blush(-76, 22) + C(30, -102, 3.2, '#9fd4ff') + PP('M30 -108 q3 5 0 9 q-3 -4 0 -9Z', '#9fd4ff'),
+  penguin: () => shadow(26) + E(-9, -3, 9, 4.5, '#f2994a') + E(9, -3, 9, 4.5, '#f2994a') + E(0, -44, 25, 42, '#23283a') + E(0, -40, 17, 33, '#f6f1e7')
+    + PP('M-24 -56 Q-40 -40 -30 -26 Q-26 -40 -22 -46Z', '#23283a') + PP('M24 -56 Q40 -40 30 -26 Q26 -40 22 -46Z', '#23283a')
+    + C(0, -84, 19, '#23283a') + E(0, -80, 12, 12, '#f6f1e7') + C(-6, -84, 2.4, '#2a2020') + C(6, -84, 2.4, '#2a2020') + PP('M-5 -78 h10 l-5 7Z', '#f2994a'),
+  panda: () => shadow(32) + E(-14, -14, 11, 16, '#2a2a30') + E(14, -14, 11, 16, '#2a2a30') + E(0, -44, 28, 34, '#f6f6f6')
+    + E(-27, -50, 9, 20, '#2a2a30', 'transform="rotate(14 -27 -50)"') + E(27, -50, 9, 20, '#2a2a30', 'transform="rotate(-14 27 -50)"') + RC(30, -70, 5, 62, 2, '#7ab05a')
+    + C(-17, -90, 8, '#2a2a30') + C(17, -90, 8, '#2a2a30') + C(0, -76, 22, '#f6f6f6') + E(-9, -76, 6, 8, '#2a2a30', 'transform="rotate(20 -9 -76)"') + E(9, -76, 6, 8, '#2a2a30', 'transform="rotate(-20 9 -76)"')
+    + C(-9, -76, 2, '#fff') + C(9, -76, 2, '#fff') + E(0, -68, 4.4, 3.2, '#2a2a30') + SS('M-4 -62 q4 4 8 0', '#2a2a30', 1.6),
+};
+const SCALE = { oji: .97, oba: .93, onii: 1, onee: .98, boy: 1.05, girl: 1.05, dog: 1.25, cat: 1.25, penguin: 1.2, panda: 1.1, baby: 1.15, thief: 1, ninja: 1, santa: 1.05, alien: 1.1, ghost: 1.2 };
+const charSVG = k => `<g transform="scale(${SCALE[k] || 1})">${CHARS[k]()}</g>`;
+const GROUPS = {
+  normal: [['oji', 'おじいちゃん'], ['oba', 'おばあちゃん'], ['onii', 'おにいさん'], ['onee', 'おねえさん'], ['boy', '男の子'], ['girl', '女の子']],
+  funny: [['dog', '犬'], ['cat', '猫'], ['penguin', 'ペンギン'], ['panda', 'パンダ'], ['baby', '赤ちゃん'], ['thief', '泥棒'], ['ninja', '忍者'], ['santa', 'サンタ'], ['alien', '宇宙人'], ['ghost', '幽霊']],
+};
+
+/* ---- 背景（ゲームの舞台と同じ座標：300×250、地面は y=232。広い面は、画面の外まで塗る）---- */
+const sceneShopping = () => {
+  let s = `<rect x="-600" y="-600" width="1500" height="832" fill="#ece0c8"/>`;
+  for (let x = -330; x < 640; x += 66) s += RC(x, 14, 34, 36, 2, '#a9c9db') + RC(x - 2, 12, 38, 4, 1, '#8a7a62') + SS(`M${x + 17} 14 V50`, '#f4efe4', 2);
+  const shops = [['八百屋', '#c9392b', '#fff3d6'], ['ラーメン', '#2f6aa8', '#ffe9c8'], ['お弁当', '#2f8a5a', '#fff3d6'], ['豆腐店', '#c9392b', '#e8f1f6'], ['肉のサトウ', '#2f6aa8', '#fff3d6']];
+  for (let i = -3; i < 6; i++) {
+    const x0 = i * 112 - 6, sh = shops[((i % 5) + 5) % 5];
+    s += RC(x0, 80, 112, 142, 0, '#d9cbb0') + RC(x0 + 12, 118, 88, 82, 3, sh[2]) + RC(x0 + 12, 118, 88, 4, 0, '#8a7a62') + RC(x0 + 20, 200, 72, 22, 0, '#a58b66');
+    for (let k = 0; k < 6; k++) s += PP(`M${x0 + 8 + k * 16} 72 h16 l-2 20 h-12Z`, k % 2 ? '#fff' : sh[1]) + C(x0 + 16 + k * 16, 93, 7, k % 2 ? '#fff' : sh[1]);
+    s += RC(x0 + 18, 96, 76, 20, 3, '#6b4a2b');
+    for (let k = 0; k < 4; k++) s += RC(x0 + 22 + k * 20, 168 + (k % 2) * 4, 16, 30 - (k % 2) * 4, 2, ['#e0533a', '#f2c94c', '#6fb04a', '#e0533a'][k]);
+  }
+  s += SS('M-300 8 Q-150 34 0 8 Q150 34 300 8 Q450 34 600 8', '#5a4a3a', 1.6);
+  for (let x = -280; x < 600; x += 30) { const y = 8 + 15 * Math.abs(Math.sin(((x + 300) % 300) / 300 * Math.PI)); s += PP(`M${x} ${y} l12 0 l-6 12Z`, ['#d62839', '#f2c94c', '#2f6aa8', '#2f8a5a'][((x + 300) / 30) % 4 | 0]); }
+  s += RC(266, 30, 5, 194, 2, '#4a4f5a') + PP('M252 30 Q268 14 286 30Z', '#4a4f5a') + C(268, 34, 6, '#fff3b0');
+  s += RC(-600, 222, 1500, 10, 0, '#8e949f') + RC(-600, 232, 1500, 700, 0, '#c9cdd4');
+  for (const y of [232, 262, 304, 362, 440, 548, 700]) s += SS(`M-600 ${y} H900`, '#aab0ba', 2);
+  for (let i = 0; i < 6; i++) { const k = 1 + i * .55, w = 70 * k; for (let x = 150 - 20 * w + (i % 2) * w / 2; x < 900; x += w) s += SS(`M${x.toFixed(0)} ${[232, 262, 304, 362, 440, 548, 700][i]} V${[232, 262, 304, 362, 440, 548, 700][i + 1]}`, '#aab0ba', 2); }
+  return s;
+};
+const sceneResidential = () => {
+  let s = `<rect x="-600" y="-600" width="1500" height="800" fill="url(#skyB)"/>`;
+  s += E(40, 40, 34, 11, '#fff', 'opacity=".95"') + E(64, 34, 24, 10, '#fff', 'opacity=".95"') + E(210, 62, 38, 12, '#fff', 'opacity=".9"') + E(236, 56, 24, 9, '#fff', 'opacity=".9"') + E(-120, 50, 40, 12, '#fff', 'opacity=".9"') + E(420, 44, 40, 12, '#fff', 'opacity=".9"');
+  const hs = [['#e9c9a0', '#b5523b'], ['#f2efe6', '#4f6a8a'], ['#d8e3c8', '#8a4a3a'], ['#f4e3c0', '#3f6a5a']];
+  for (let i = -4; i < 7; i++) { const x = i * 90 - 30, h = hs[((i % 4) + 4) % 4]; s += RC(x, 86, 76, 70, 0, h[0]) + PP(`M${x - 8} 90 L${x + 38} 54 L${x + 84} 90Z`, h[1]) + RC(x + 12, 104, 18, 22, 1, '#9fd4ff') + RC(x + 46, 104, 18, 22, 1, '#9fd4ff') + RC(x + 33, 126, 12, 30, 1, '#7a5a3a'); }
+  s += RC(-600, 148, 1500, 74, 0, '#d9d2c2');
+  for (let y = 160; y < 222; y += 14) s += SS(`M-600 ${y} H900`, '#bfb8a6', 1.6);
+  for (let x = -600; x < 900; x += 56) for (let y = 148; y < 222; y += 28) s += SS(`M${x + ((y / 28) % 2 ? 28 : 0)} ${y} v14`, '#bfb8a6', 1.6);
+  s += RC(-600, 138, 1500, 14, 0, '#d0c9b6'); for (let x = -590; x < 900; x += 22) s += C(x, 136, 11, '#5d9a4a') + C(x + 11, 130, 9, '#6fb04a');
+  s += RC(60, -60, 8, 282, 2, '#5a4636') + RC(36, -18, 56, 5, 1, '#5a4636') + RC(44, 0, 40, 4, 1, '#5a4636') + C(44, -20, 3, '#e8e8ee') + C(84, -20, 3, '#e8e8ee') + C(52, -2, 3, '#e8e8ee') + C(76, -2, 3, '#e8e8ee');
+  s += SS('M-600 -16 Q-270 6 44 -20 Q300 4 900 -14', '#333', 1.3) + SS('M-600 2 Q-250 22 52 -2 Q300 20 900 4', '#333', 1.3) + SS('M44 -20 Q-100 0 -600 -4M84 -20 Q300 -4 900 -28', '#333', 1.3);
+  s += RC(246, 160, 40, 62, 3, '#2f6aa8') + RC(251, 166, 30, 22, 2, '#cfe6f6') + RC(252, 194, 28, 5, 1, '#e8f1f6') + C(261, 207, 4, '#f2c94c') + C(275, 207, 4, '#d62839') + RC(250, 214, 32, 6, 1, '#1d4a78');
+  s += RC(-600, 222, 1500, 10, 0, '#b9bcc4') + RC(-600, 232, 1500, 700, 0, '#6e737d');
+  s += RC(-600, 232, 1500, 6, 0, '#9ea3ad');
+  for (let x = -480; x < 900; x += 60) s += RC(x, 300, 34, 5, 2, '#f1efe6');
+  for (let x = 20; x < 260; x += 24) s += RC(x, 262, 12, 70, 0, '#f1efe6', 'opacity=".0"');
+  return s;
+};
+const sceneRiver = () => {
+  let s = `<rect x="-600" y="-600" width="1500" height="760" fill="url(#skyC)"/>`;
+  s += C(206, 112, 52, '#ffe3b0', 'opacity=".35"') + C(206, 112, 32, '#fff1c8');
+  s += PP('M-600 140 Q-380 96 -180 128 Q-60 88 90 134 Q220 100 420 132 Q640 90 900 136 V160 H-600Z', '#c9805c') + PP('M-600 150 Q-300 122 0 148 Q300 120 900 150 V170 H-600Z', '#b86b4f');
+  s += RC(-600, 158, 1500, 50, 0, 'url(#riv)');
+  for (let i = 0; i < 9; i++) s += RC(150 + (i % 3) * 14 - 10, 164 + i * 5, 50 - (i % 4) * 8, 2.4, 1, '#ffe7c0', 'opacity=".7"');
+  s += RC(-120, 144, 150, 6, 1, '#7a4a3a') + [0, 1, 2, 3, 4].map(i => RC(-110 + i * 30, 150, 5, 14, 0, '#7a4a3a')).join('');
+  s += RC(-600, 206, 1500, 22, 0, '#8aa65a') + RC(-600, 206, 1500, 5, 0, '#a3bd6c');
+  for (let x = -590; x < 900; x += 34) s += RC(x, 188, 3, 24, 0, '#6a7a8a') ;
+  s += RC(-600, 190, 1500, 4, 0, '#6a7a8a') + RC(-600, 200, 1500, 4, 0, '#6a7a8a');
+  for (let x = -560; x < 900; x += 52) { s += SS(`M${x} 224 q-2 -16 2 -28`, '#6f8a46', 1.6) + C(x + 2, 194, 3.4, ['#f08ab0', '#fff', '#e9628a'][(x / 52 | 0) % 3 < 0 ? 0 : Math.abs(x / 52 | 0) % 3]); }
+  s += RC(-600, 228, 1500, 4, 0, '#9a7a52') + RC(-600, 232, 1500, 700, 0, '#c9a77c');
+  for (let i = 0; i < 70; i++) { const x = ((i * 97) % 700) - 200, y = 240 + ((i * 53) % 220); s += E(x, y, 3 + (i % 4), 1.6 + (i % 2), '#b3906a'); }
+  for (let y of [262, 304, 362, 440]) s += SS(`M-600 ${y} H900`, '#b3906a', 1.4, 'opacity=".5"');
+  s += SS('M20 40 q4 -5 8 0 q4 -5 8 0', '#4a3a3a', 1.6) + SS('M60 62 q4 -5 8 0 q4 -5 8 0', '#4a3a3a', 1.6) + SS('M-30 56 q3 -4 6 0 q3 -4 6 0', '#4a3a3a', 1.4);
+  return s;
+};
+const SCENES = { shopping: sceneShopping, residential: sceneResidential, river: sceneRiver };
+
+return { CHARS, SCENES, SCALE, GROUPS, charSVG, DEFS: `<defs><linearGradient id="skyB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ccaf5"/><stop offset="1" stop-color="#e6f4ff"/></linearGradient></defs><defs><linearGradient id="skyC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f19a58"/><stop offset=".55" stop-color="#ffc98a"/><stop offset="1" stop-color="#fff0cf"/></linearGradient><linearGradient id="riv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6b985"/><stop offset="1" stop-color="#d98a6a"/></linearGradient></defs>` + '<defs>' + KARA + '</defs>' };
+})();
+/* STREET:END */
 const SERIF = `font-family="'Hiragino Mincho ProN','Yu Mincho','Noto Serif JP',serif" font-weight="700"`;
 const sceneSVG = () => `
     <g class="bgs dojo">
@@ -759,6 +979,7 @@ const sceneSVG = () => `
       <g><rect x="16" y="30" width="54" height="40" rx="2" fill="#6b5236"/><rect x="21" y="35" width="44" height="30" fill="#f6f1e7"/><text x="43" y="57" text-anchor="middle" font-size="19" ${SERIF} fill="#33405a">誠意</text><text x="43" y="28" text-anchor="middle" font-size="9" fill="#6a7790">社訓</text></g>
       <g><path d="M10 196Q4 176 14 166Q20 184 17 196ZM20 196Q22 172 34 164Q32 184 24 196ZM26 198Q38 184 48 188Q40 198 28 200Z" fill="#3f8f5a"/><path d="M8 200H34L31 232H11Z" fill="#b5523b"/></g>
     </g>
+    ${STREET.DEFS}<g class="bgs st-shop">${STREET.SCENES.shopping()}</g><g class="bgs st-res">${STREET.SCENES.residential()}</g><g class="bgs st-river">${STREET.SCENES.river()}</g>
 `;
 function figureSVG(themed) {
   return `<svg viewBox="0 0 300 250" aria-hidden="true">${themed ? sceneSVG() : ''}
@@ -947,6 +1168,41 @@ function vsRound() {   // ラウンドの始まり：相手たちを直立に戻
   Object.values(VS.plates).forEach(p => { p.sub = RM.on ? p.sub : ''; });
   vsMarks();
 }
+/* ---------- 道（サバイバル／ノーミス）：背景は、始めるときにランダム。クリアすると相手が笑顔で去り、次の人が歩いてくる ---------- */
+const ST = { g: null };
+(() => { const pos = document.createElementNS(SVGNS, 'g'); pos.setAttribute('transform', 'translate(240 232)'); const g = document.createElementNS(SVGNS, 'g'); g.setAttribute('class', 'stopp'); pos.appendChild(g); FIG.appendChild(pos); ST.g = g; })();
+const STREET_CLASSES = ['sc-shop', 'sc-res', 'sc-river'];
+const OPP_NORMAL = ['oji', 'oba', 'onii', 'onee', 'boy', 'girl'];                       // 1〜3人目は、普通の人だけ
+const OPP_FUNNY = [['dog', 10], ['cat', 10], ['penguin', 10], ['panda', 10], ['baby', 10], ['thief', 10], ['ninja', 12.5], ['santa', 12.5], ['alien', 7.5], ['ghost', 7.5]];   // 4人目から、時々
+function streetPick(s, stage) {
+  let funny = false;
+  if (stage >= 4) funny = Math.random() < Math.min(.3 + .1 * (stage - 4), .7) || (stage === 5 && !s.funnySeen);   // 4人目30%、1人ごとに+10%、最大70%。5人目までに必ず1回
+  const pool = (funny ? OPP_FUNNY : OPP_NORMAL.map(k => [k, 1])).filter(x => x[0] !== s.key);   // 同じ相手は、続けて出ない
+  let r = Math.random() * pool.reduce((a, x) => a + x[1], 0);
+  let pick = pool[pool.length - 1][0];
+  for (const x of pool) { r -= x[1]; if (r <= 0) { pick = x[0]; break; } }
+  if (funny) s.funnySeen = true;
+  return pick;
+}
+const streetRender = (key, mood) => { ST.g.innerHTML = STREET.charSVG(key, mood); };
+function streetClear() { ST.g.innerHTML = ''; ST.g.setAttribute('class', 'stopp'); FIG.classList.remove('sc-street', ...STREET_CLASSES); $('#s-game').classList.remove('th-street'); }
+function streetStep() {   // 新しいステージの相手。前の相手は、笑顔で去る
+  const s = G.street, g = G, key = streetPick(s, G.round), prev = s.key;
+  s.key = key;
+  if (!prev) { streetRender(key, 'wait'); ST.g.setAttribute('class', 'stopp enter'); return; }
+  streetRender(prev, 'happy'); ST.g.setAttribute('class', 'stopp leave');
+  setTimeout(() => { if (G !== g || !G.street || G.street.key !== key) return; streetRender(key, 'wait'); ST.g.setAttribute('class', 'stopp enter'); }, 780);
+}
+function streetMood(m) {   // 答え合わせ：ズレに応じて、相手の表情が変わる
+  const s = G && G.street; if (!s || !s.key) return;
+  streetRender(s.key, m === 'delight' || m === 'happy' ? 'happy' : m === 'angry' || m === 'furious' ? 'angry' : 'wait');
+  ST.g.setAttribute('class', 'stopp ' + ({ delight: 'jump', happy: 'hop', angry: 'fume', furious: 'rage' }[m] || ''));
+}
+const streetBg = scene => {   // 結果画面の背景：ゲーム中と同じ道の絵
+  const f = { 'sc-shop': 'shopping', 'sc-res': 'residential', 'sc-river': 'river' }[scene];
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -158 300 650" preserveAspectRatio="xMidYMin slice">${STREET.DEFS}${STREET.SCENES[f]()}</svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+};
 function vsReveal(rows) {   // 結果：相手たちが、押した角度までお辞儀する。2人のときは、勝った側に旗が上がる
   if (!VS.on) return;
   rows.forEach(r => {
@@ -1073,9 +1329,12 @@ function beginRound(target, limitMs) {
   const practice = G.kind === 'solo' && G.mode === 'practice';
   FIG.classList.toggle('practice', practice);       // 練習だけ、お題の絵（点線）が出て、相手がマネキンになる
   const office = G.kind === 'solo' && G.mode === 'daily';   // 今日の謝罪ランキングは会社、それ以外は道場
-  FIG.classList.toggle('sc-office', office); FIG.classList.toggle('sc-dojo', !office);
-  FIG.classList.toggle('sensei', !office && !practice);   // 道場のモードの相手は、道場の先生（練習はマネキン）
-  $('#s-game').classList.toggle('th-office', office);
+  const street = G.kind === 'solo' && !!G.street;   // 道：サバイバルとノーミス
+  if (!street) streetClear();
+  FIG.classList.toggle('sc-office', office); FIG.classList.toggle('sc-dojo', !office && !street);
+  FIG.classList.toggle('sensei', !office && !practice && !street);   // 道場のモードの相手は、道場の先生（練習はマネキン）
+  if (street) { FIG.classList.add('sc-street'); STREET_CLASSES.forEach(c => FIG.classList.toggle(c, G.street.scene === c)); }
+  $('#s-game').classList.toggle('th-office', office || street); $('#s-game').classList.toggle('th-street', street);
   FIG.classList.toggle('hardmode', !practice);
   vsApply(); vsRound();   // 対戦は、向かい合う（2人）／並ぶ（3人以上）。ほかは、元の絵
   setMood('wait', false);
@@ -1116,7 +1375,7 @@ function doLock(a) {
   if (G.kind === 'online') { if (RM.on) rmLocked(); else onlineLocked(); }
   setTimeout(() => {
     if (R !== r) return;
-    if (G.kind !== 'online') setMood(moodOf(r.err), true);   // 対戦の先生は審判なので、表情を変えない
+    if (G.kind !== 'online') { if (G.street) streetMood(moodOf(r.err)); else setMood(moodOf(r.err), true); }   // 対戦の先生は審判なので、表情を変えない
     flash(r.err <= 1.5 ? 2 : 1);
     sfx.lock(r.err); vib(r.err <= 1.5 ? [30, 40, 30] : 40); celebrate(r.err);
     if (G.kind !== 'online') soloLocked();
@@ -1286,6 +1545,7 @@ function startSolo(mode) {
     for (let i = G.log.length - 1; i >= 0 && G.log[i].err <= 1.5; i--) G.streak++;
     toast(`${G.log.length}問目まで終わっています。続きからです`);
   }
+  if (mode === 'survival' || mode === 'nomiss') G.street = { scene: STREET_CLASSES[randInt(0, 2)], key: null, funnySeen: false };   // 道：背景は、ランダム
   show('s-game'); nextSolo();
 }
 function nextSolo() {
@@ -1293,6 +1553,7 @@ function nextSolo() {
   G.round++;
   const t = G.targets ? G.targets[G.round - 1] : genTarget(G.round, G.prev, G.mode === 'practice' ? 5 : 1); G.prev = t;
   updateHeader(); $('#g-players').innerHTML = '';
+  if (G.street) streetStep();
   beginRound(t, 0);
 }
 function soloLocked() {
@@ -1360,7 +1621,20 @@ function finishSolo(over) {
   const bigHTML = `<div class="fi-big">${big}${unit === '°' ? '<sup class="deg">°</sup>' : `<small>${unit}</small>`}</div>`;
   const office = G.mode === 'daily';
   $('#s-final').classList.toggle('office', office);
-  if (office) {   // 本番謝罪：会社の「評価書」
+  const streetRes = !!G.street; $('#s-final').classList.toggle('street', streetRes); $('#s-final').style.backgroundImage = streetRes ? streetBg(G.street.scene) : '';
+  if (streetRes) {   // サバイバル／ノーミス：道の背景に、評価書
+    const lab = title.length > 4 ? [title.slice(0, Math.ceil(title.length / 2)), title.slice(Math.ceil(title.length / 2))] : ['', title];
+    const rows = G.log.map((l, i) => `<tr><td>${i + 1}. お題 ${sg(l.target)}°</td><td>${sgf(l.angle)}°</td><td>${l.err.toFixed(1)}°</td></tr>`).join('');
+    const trailTxt = G.base === 'nomiss' && s.cleared > 0 ? `昇進：${s.cleared > 4 ? '… → ' : ''}${LADDER.slice(Math.max(0, s.cleared - 4), s.cleared + 1).map(esc).join(' → ')}` : '';
+    $('#fi-body').innerHTML = `<div class="doc">
+      <div class="doc-head"><b>謝罪道場</b><span>${esc(MODE[G.mode].name)}</span></div>
+      <div class="doc-meta"><span>${G.base === 'nomiss' ? `ズレ ${fmt(s.param)}° 以内を、何連続で決められる？` : `HP ${s.param}。何ステージ突破できる？`}</span><span>${esc(S.name)} 様</span></div>
+      <div class="doc-score"><small>${G.base === 'nomiss' ? '連続成功' : '突破ステージ'}</small><div class="fi-big">${big}<small>${G.base === 'nomiss' ? '連続' : 'ステージ'}</small></div><div class="doc-stamp">${lab[0] ? `<small>${esc(lab[0])}</small>` : ''}<span>${esc(lab[1])}</span></div></div>
+      <div class="doc-line">${G.base === 'nomiss' ? '最終称号' : '称号'}<b>${esc(title)}</b>${isNew ? '<small style="color:#a3261f;font-weight:700">NEW RECORD</small>' : `<small>${esc(sub)}</small>`}</div>
+      ${trailTxt ? `<div class="doc-trail">${trailTxt}</div>` : ''}
+      <table class="doc-tbl"><thead><tr><th>お題</th><th>あなたの角度</th><th>ズレ</th></tr></thead><tbody>${rows || '<tr><td colspan="3">記録なし</td></tr>'}</tbody></table>
+    </div>`;
+  } else if (office) {   // 本番謝罪：会社の「評価書」
     const rows = G.log.map((l, i) => `<tr><td>${i + 1}. お題 ${sg(l.target)}°</td><td>${sgf(l.angle)}°</td><td>${l.err.toFixed(1)}°</td></tr>`).join('');
     $('#fi-body').innerHTML = `<div class="doc">
       <div class="doc-head"><b>謝罪道場</b><span>誠意評価書</span></div>
@@ -1886,7 +2160,7 @@ function onNetMsg(m) {
       G = { kind: 'online', targets: m.targets, rounds: m.rounds, blind: m.blind, round: -1, total: 0, streak: 0, locked: [] };
       R = null; sheet(null); updateHeader(); renderPlayers();
       $('#g-tname').textContent = '準備'; $('#g-tnum').textContent = '--'; setTargetArc(0);
-      FIG.classList.remove('practice', 'sc-office', 'hardmode'); FIG.classList.add('sc-dojo', 'sensei', 'hardmode'); $('#s-game').classList.remove('th-office');   // 最初のお題の前から、道場の絵
+      streetClear(); FIG.classList.remove('practice', 'sc-office', 'hardmode'); FIG.classList.add('sc-dojo', 'sensei', 'hardmode'); $('#s-game').classList.remove('th-office');   // 最初のお題の前から、道場の絵
       setTorso(0, false); setMood('wait', false); vsApply(); vsRound();
       show('s-game');
       break;
