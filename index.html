@@ -642,6 +642,20 @@ try {
   if (S.rm && S.rm.rating != null) delete S.rm;
 } catch (e) {}
 if (!S.name) S.name = 'ゲスト' + randInt(10, 99);
+/* ---------- アクセス解析（Google アナリティクス） ---------- */
+// 測定ID（'G-' から始まる）を入れると、有効になる。空のあいだは、何も送らない。
+// URLに ?ga=off を付けて開くと、この端末だけ数えない（運営のテスト用）。?ga=on で、もとに戻る。開発用の localhost も、数えない
+const GA_ID = '';
+let GA_OFF = false;
+try { const q = new URLSearchParams(location.search).get('ga'); if (q === 'off') localStorage.setItem('shazai-ga', 'off'); if (q === 'on') localStorage.removeItem('shazai-ga'); GA_OFF = localStorage.getItem('shazai-ga') === 'off'; } catch (e) {}
+const GA_ON = !!GA_ID && !GA_OFF && !/^(127\.0\.0\.1|localhost)$/.test(location.hostname);
+if (GA_ON) {
+  window.dataLayer = window.dataLayer || []; window.gtag = function () { dataLayer.push(arguments); };
+  gtag('js', new Date()); gtag('config', GA_ID, { allow_google_signals: false, allow_ad_personalization_signals: false });
+  const sc = document.createElement('script'); sc.async = true; sc.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(GA_ID); document.head.appendChild(sc);
+}
+// 遊ばれた回数を、モードごとに数える（イベント名に、モードを入れる：play_start_daily、play_finish_nomiss、share_result など）
+const track = (name, p) => { if (GA_ON) { try { gtag('event', name, p || {}); } catch (e) {} } };
 /* ---------- 名前の禁止ワード ---------- */
 // 全角・半角、カタカナ・ひらがな、すき間の記号、数字での言い換え（1→i など）をそろえて調べる。使えない名前は、入力できず、画面でも「＊＊＊」で隠す
 const nameKey = s => String(s).normalize('NFKC').toLowerCase().replace(/[\u30a1-\u30f6]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60)).replace(/[^\p{L}\p{N}]/gu, '');
@@ -1605,6 +1619,7 @@ function startSolo(mode) {
     toast(`${G.log.length}問目まで終わっています。続きからです`);
   }
   if (mode === 'survival' || mode === 'nomiss') G.street = { scene: STREET_CLASSES[randInt(0, 2)], key: null, funnySeen: false };   // 道：背景は、ランダム
+  track('play_start_' + mode);
   show('s-game'); nextSolo();
 }
 function nextSolo() {
@@ -1667,6 +1682,7 @@ function summarySolo(over) {
   return s;
 }
 function finishSolo(over) {
+  track('play_finish_' + G.mode);
   const s = summarySolo(over);
   let isNew = false;
   const k = bestKey(G.mode), b = S.best[k];
@@ -1990,6 +2006,7 @@ function openCard(blob, text) {
 }
 $('#card-close').onclick = () => { $('#m-card').hidden = true; };
 async function shareResult() {
+  track('share_result');
   const text = (G && G.shareText) || '謝罪道場', url = location.href.split('#')[0];
   let blob = null;
   try { if (G && G.card) blob = await cardBlob(G.card); } catch (e) {}
@@ -2273,6 +2290,7 @@ function onNetMsg(m) {
       if (!Net.isHost) { renderLobby(); if (current !== 's-game' && current !== 's-final') show('s-lobby'); else if (current === 's-game') renderPlayers(); }
       break;
     case 'start':
+      track(RM.on ? (RM.bot ? 'play_start_cpu' : 'play_start_ranked') : 'play_start_online');
       Net.inGame = true; Net.players = m.players;
       G = { kind: 'online', targets: m.targets, rounds: m.rounds, blind: m.blind, round: -1, total: 0, streak: 0, locked: [] };
       R = null; sheet(null); updateHeader(); renderPlayers();
@@ -2316,6 +2334,7 @@ function onlineResult(m) {
     <div class="sh-meta">${m.last ? 'まもなく最終結果です…' : 'まもなく次のお題です'}</div>`);
 }
 function onlineEnd(m) {
+  track('play_finish_online');
   Net.inGame = false;
   $('#fi-rank').hidden = true; $('#fi-rankopen').hidden = true;
   const rk = m.ranking;
@@ -2728,6 +2747,7 @@ async function rmFinish(why) {
   idle(); rmShowEnd(res, out, why);
 }
 function rmShowEnd(res, out, why) {
+  track(RM.bot ? 'play_finish_cpu' : 'play_finish_ranked');
   const label = res === 'win' ? '勝利！' : res === 'loss' ? '敗北…' : '引き分け';
   const rs = RM.res || {}, myE = rs.me ? rs.me.e : null, opE = rs.opp ? rs.opp.e : null;
   let rate = '', note = '';
