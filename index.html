@@ -240,6 +240,9 @@ svg .mqbase{fill:#2d3340}
 .g-players{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;min-height:0;position:relative;z-index:3}
 .g-players span{font-size:12px;border:1px solid rgba(246,241,231,.7);background:rgba(246,241,231,.9);border-radius:20px;padding:1px 10px;color:var(--ink)}
 .g-players span.ok{color:#17724f;border-color:#17724f}
+#s-game.vs2 #g-players{display:none}   /* 2人の対戦は、名札（絵の下）に、名前と入力ずみの印を出す */
+svg .vsp rect{fill:rgba(246,241,231,.96);stroke:#bba98c;stroke-width:.8}
+svg .vsp text{fill:#1b2236;font:700 9.5px var(--sans);text-anchor:middle}
 .slider-wrap{padding:2px 6px 0;position:relative;z-index:3}
 .slider-wrap input{width:100%;accent-color:var(--red);height:32px}
 .slider-wrap small{display:block;text-align:center;color:var(--gt);text-shadow:0 1px 3px rgba(0,0,0,.28);font-size:12px}
@@ -277,6 +280,32 @@ svg .mqbase{fill:#2d3340}
 /* final */
 .fi-big{font-family:var(--serif);font-size:84px;line-height:1;text-align:center;color:var(--gold);font-variant-numeric:tabular-nums}
 .fi-big small{font-size:28px;color:var(--paper);margin-left:6px}
+.fi-big .deg{font-size:.42em;line-height:1;vertical-align:top;position:relative;top:.07em;margin-left:3px;color:inherit}   /* ° は、数字の右上に、小さく添える */
+/* 本番謝罪の結果は、会社っぽく：明るい壁とカーペット、評価書（紙） */
+#s-final.office{--dim:#5a6a86;--line:rgba(27,34,54,.22);background:linear-gradient(#cfd8e5 0 64%,#a5b2c7 64% 65.5%,#58677f 65.5%);color:#1b2236}
+#s-final.office .fi-rank{background:#fff;color:#1b2236;box-shadow:0 2px 8px rgba(20,30,55,.2)}
+#s-final.office .fi-rank b{color:#a3261f}
+#s-final.office .btn.ghost{color:#f6f1e7;border-color:rgba(246,241,231,.6)}
+.doc{background:#fbfaf6;color:#1b2236;border-radius:6px;box-shadow:0 8px 22px rgba(20,30,55,.3);overflow:hidden}
+.doc-head{background:#1f3568;color:#f6f1e7;display:flex;justify-content:space-between;align-items:baseline;padding:10px 16px}
+.doc-head b{font-family:var(--serif);font-size:22px;letter-spacing:.14em}
+.doc-head span{font-size:13px;letter-spacing:.24em;color:#e9b44c}
+.doc-meta{display:flex;justify-content:space-between;gap:10px;padding:8px 16px;font-size:13px;color:#5a6a86;border-bottom:1px solid rgba(27,34,54,.12)}
+.doc-score{position:relative;text-align:center;padding:14px 16px 4px}
+.doc-score small{display:block;font-size:13px;color:#5a6a86;letter-spacing:.24em}
+#s-final.office .doc .fi-big{color:#1b2a4e;font-size:80px;margin-top:2px}
+.doc-stamp{position:absolute;right:8px;top:16px;width:68px;height:68px;border:3.5px solid #d62839;border-radius:50%;color:#d62839;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:700;font-size:16px;letter-spacing:.02em;transform:rotate(-14deg);opacity:.92}
+.doc-line{text-align:center;padding:2px 16px 12px;font-size:14px;color:#33405a}
+.doc-line b{font-family:var(--serif);font-size:26px;color:#a3261f;margin:0 4px;letter-spacing:.06em}
+.doc-tbl{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+.doc-tbl th{background:#e8edf5;color:#33405a;font-weight:700;font-size:12px;padding:5px 14px;text-align:right}
+.doc-tbl td{padding:6px 14px;text-align:right;border-top:1px solid rgba(27,34,54,.1)}
+.doc-tbl th:first-child,.doc-tbl td:first-child{text-align:left}
+.doc-scale{padding:10px 16px 12px;font-size:12px;color:#5a6a86;background:#f1f4f9;line-height:1.75}
+.doc-scale b{color:#33405a}
+.doc-scale .sc{display:flex;flex-wrap:wrap;gap:0 14px;margin:2px 0}
+.doc-scale .sc span{white-space:nowrap}
+.doc-scale i{font-style:normal;display:block}
 .fi-title{text-align:center;font-family:var(--serif);font-size:24px;letter-spacing:.08em}
 .fi-new{text-align:center;color:var(--gold);font-weight:700;letter-spacing:.15em}
 .fi-sub{text-align:center;color:var(--dim)}
@@ -668,6 +697,7 @@ let current = 's-menu';
 let onScreen = () => {};   // 画面が替わったときの後始末（ランクマッチの待機をやめる、通信を切る）。あとで設定する
 function show(id) {
   current = id;
+  if (id !== 's-final') $('#s-final').classList.remove('office');   // 会社っぽい結果は、本番謝罪の結果だけ
   onScreen(id);
   $$('.screen').forEach(s => s.classList.toggle('on', s.id === id));
   wake(id === 's-game');
@@ -841,6 +871,91 @@ function setTargetArc(t) {
   F_GHOST.setAttribute('transform', `rotate(${t} 120 148)`);
 }
 
+/* ---------- 対戦の絵：2人は向かい合って、真ん中に先生。3人以上は、同じ向きで少し重なって並び、先生は右端 ---------- */
+// ランクマッチと友達対戦（G.kind === 'online'）だけ。一人のときと、ほかのモードは、これまでの絵のまま
+const SVGNS = 'http://www.w3.org/2000/svg';
+const VS = { on: false, key: '', root: null, top: null, figs: {}, plates: {}, flags: null };
+const FIG_PL = $('.pl', FIG), FIG_CUST_OUT = $('.cust', FIG).parentNode.parentNode;
+const PL_HOME = FIG_PL.getAttribute('transform'), CUST_HOME = FIG_CUST_OUT.getAttribute('transform');
+const vsPlace = (cx, s) => `translate(${cx - 120} 0) translate(120 232) scale(${s}) translate(-120 -232)`;
+function vsReset() {
+  if (!VS.on) return;
+  VS.on = false; VS.key = '';
+  FIG_PL.setAttribute('transform', PL_HOME); FIG_CUST_OUT.setAttribute('transform', CUST_HOME);
+  if (VS.root) VS.root.remove(); if (VS.top) VS.top.remove();
+  VS.root = VS.top = VS.flags = null; VS.figs = {}; VS.plates = {};
+  $('#s-game').classList.remove('vs2');
+}
+function vsClone(cx, s, mirror) {   // 自分の絵をコピーして、相手の絵にする（お題の影は、自分の分だけ）
+  const el = FIG_PL.cloneNode(true);
+  $$('.ghost,.tarc,.tarc-halo', el).forEach(n => n.remove());
+  el.setAttribute('transform', vsPlace(cx, s));
+  if (!mirror) return el;
+  const g = document.createElementNS(SVGNS, 'g'); g.setAttribute('transform', 'translate(300 0) scale(-1 1)'); g.appendChild(el); return g;
+}
+function vsApply() {
+  const ps = Net.players || [], n = ps.length;
+  if (!G || G.kind !== 'online' || n < 2) { vsReset(); return; }
+  const key = n + ':' + ps.map(p => p.id).join(',') + ':' + Net.myId;
+  if (VS.on && VS.key === key) return;
+  vsReset(); VS.on = true; VS.key = key;
+  const root = document.createElementNS(SVGNS, 'g'), top = document.createElementNS(SVGNS, 'g');
+  VS.root = root; VS.top = top;
+  FIG_PL.parentNode.insertBefore(root, FIG_PL); FIG.appendChild(top);   // 相手たちは、自分の後ろ。名札と旗は、いちばん手前
+  const others = ps.filter(p => p.id !== Net.myId);
+  VS.figs = { [Net.myId]: F_TORSO };
+  if (n === 2) {
+    FIG_PL.setAttribute('transform', vsPlace(30, .85));
+    const o = others[0], g = vsClone(30, .85, true); root.appendChild(g); VS.figs[o.id] = $('.torso', g);
+    FIG_CUST_OUT.setAttribute('transform', 'translate(-82 0)');   // 先生：真ん中
+    $('#s-game').classList.add('vs2');
+    const flag = (cls, pole, cloth) => `<g class="${cls}" style="display:none"><path d="${pole}" stroke="#6b3f1d" stroke-width="3" stroke-linecap="round" fill="none"/><path d="${cloth}" fill="#d62839" stroke="#a01c14" stroke-width="1"/></g>`;
+    top.innerHTML = flag('vsf-l', 'M116 112L112 38', 'M112 38L80 46L113 58Z') + flag('vsf-r', 'M184 112L188 38', 'M188 38L220 46L187 58Z');
+    VS.flags = { l: $('.vsf-l', top), r: $('.vsf-r', top) };
+    [[Net.myId, 50, 'あなた'], [o.id, 250, o.name]].forEach(([id, x, name]) => {
+      const pg = document.createElementNS(SVGNS, 'g'); pg.setAttribute('class', 'vsp'); pg.innerHTML = '<rect y="236" height="13" rx="5"/><text y="245.4"></text>';
+      pg.dataset.x = x; top.appendChild(pg);
+      VS.plates[id] = { g: pg, name: id === Net.myId ? 'あなた' : name.slice(0, 8), sub: RM.on ? 'レート ' + (id === Net.myId ? RM.me.rating : RM.opp.rating) : '' };
+    });
+    vsMarks();
+  } else {
+    const S = .78, step = Math.min(34, 138 / (n - 1));
+    FIG_PL.setAttribute('transform', vsPlace(150, S));
+    others.forEach((p, i) => {   // 左から、奥→手前。自分がいちばん手前（先生に近い）
+      const g = vsClone(150 - step * (others.length - i), S, false); root.appendChild(g); VS.figs[p.id] = $('.torso', g);
+    });
+    FIG_CUST_OUT.setAttribute('transform', 'translate(30 0)');   // 先生：右端
+  }
+}
+function vsMarks() {   // 名札：入力ずみの印（✓）と、名前、レート／ズレ
+  Object.entries(VS.plates).forEach(([id, p]) => {
+    const t = $('text', p.g), rc = $('rect', p.g), x = +p.g.dataset.x;
+    const txt = (G && G.locked && G.locked.includes(id) ? '✓ ' : '') + p.name + (p.sub ? '　' + p.sub : '');
+    t.textContent = txt; t.setAttribute('x', x);
+    const w = [...txt].reduce((a, c) => a + (c.charCodeAt(0) > 255 ? 9.5 : 5.6), 0) + 12;
+    rc.setAttribute('x', x - w / 2); rc.setAttribute('width', w);
+  });
+}
+function vsRound() {   // ラウンドの始まり：相手たちを直立に戻し、旗をしまう
+  Object.values(VS.figs).forEach(t => { if (t !== F_TORSO) { t.classList.add('snap'); t.style.transform = 'rotate(0deg)'; } });
+  if (VS.flags) { VS.flags.l.style.display = VS.flags.r.style.display = 'none'; }
+  Object.values(VS.plates).forEach(p => { p.sub = RM.on ? p.sub : ''; });
+  vsMarks();
+}
+function vsReveal(rows) {   // 結果：相手たちが、押した角度までお辞儀する。2人のときは、勝った側に旗が上がる
+  if (!VS.on) return;
+  rows.forEach(r => {
+    const t = VS.figs[r.id]; if (t && t !== F_TORSO) { t.classList.remove('snap'); t.style.transform = `rotate(${r.miss ? 0 : r.angle}deg)`; }
+    const p = VS.plates[r.id]; if (p) p.sub = r.miss ? '時間切れ' : `ズレ ${r.err.toFixed(1)}°`;
+  });
+  vsMarks();
+  if (VS.flags && rows.length === 2) {
+    const ok = rows.filter(r => !r.miss), best = ok.length ? Math.min(...ok.map(r => r.err)) : null;
+    const win = best == null ? [] : ok.filter(r => r.err - best < 0.001);
+    if (win.length === 1) (win[0].id === Net.myId ? VS.flags.l : VS.flags.r).style.display = 'inline';
+  }
+}
+
 /* ---------- センサー ---------- */
 const Sensor = {
   angle: 0, got: false, listening: false, denied: false, checked: false, slider: 0,
@@ -950,6 +1065,7 @@ function beginRound(target, limitMs) {
   FIG.classList.toggle('sensei', !office && !practice);   // 道場のモードの相手は、道場の先生（練習はマネキン）
   $('#s-game').classList.toggle('th-office', office);
   FIG.classList.toggle('hardmode', !practice);
+  vsApply(); vsRound();   // 対戦は、向かい合う（2人）／並ぶ（3人以上）。ほかは、元の絵
   setMood('wait', false);
   sheet(null);
   $('#g-timer').textContent = '';
@@ -988,7 +1104,8 @@ function doLock(a) {
   if (G.kind === 'online') { if (RM.on) rmLocked(); else onlineLocked(); }
   setTimeout(() => {
     if (R !== r) return;
-    setMood(moodOf(r.err), true); flash(r.err <= 1.5 ? 2 : 1);
+    if (G.kind !== 'online') setMood(moodOf(r.err), true);   // 対戦の先生は審判なので、表情を変えない
+    flash(r.err <= 1.5 ? 2 : 1);
     sfx.lock(r.err); vib(r.err <= 1.5 ? [30, 40, 30] : 40); celebrate(r.err);
     if (G.kind !== 'online') soloLocked();
   }, 850);
@@ -1222,12 +1339,27 @@ function finishSolo(over) {
   else if (G.base === 'score') { big = fmt(s.total); unit = '°'; title = titleAvg(s.avg); sub = `${G.mode === 'daily' ? G.day + '　' : ''}${s.param}回の誤差の合計（平均 ${fmt(s.avg)}°）`; }
   else { big = fmt(s.avg); unit = '° 平均'; title = '練習終了'; sub = `${s.rounds}回　合計 ${fmt(s.total)}°`; }
   const logs = G.log.map((l, i) => `<div><span>${i + 1}. お題 ${sg(l.target)}°</span><span>${sgf(l.angle)}°（ズレ ${l.err.toFixed(1)}）</span></div>`).join('');
+  const bigHTML = `<div class="fi-big">${big}${unit === '°' ? '<sup class="deg">°</sup>' : `<small>${unit}</small>`}</div>`;
+  const office = G.mode === 'daily';
+  $('#s-final').classList.toggle('office', office);
+  if (office) {   // 本番謝罪：会社の「評価書」
+    const rows = G.log.map((l, i) => `<tr><td>${i + 1}. お題 ${sg(l.target)}°</td><td>${sgf(l.angle)}°</td><td>${l.err.toFixed(1)}°</td></tr>`).join('');
+    $('#fi-body').innerHTML = `<div class="doc">
+      <div class="doc-head"><b>謝罪道場</b><span>誠意評価書</span></div>
+      <div class="doc-meta"><span>1日1回限り　本番謝罪　${esc(G.day)}</span><span>${esc(S.name)} 様</span></div>
+      <div class="doc-score"><small>誤差の合計</small>${bigHTML}<div class="doc-stamp"><span>${esc(grade(s.avg).label)}</span></div></div>
+      <div class="doc-line">総合評価<b>${esc(title)}</b>（平均ズレ ${fmt(s.avg)}°）</div>
+      <table class="doc-tbl"><thead><tr><th>お題</th><th>あなたの角度</th><th>ズレ</th></tr></thead><tbody>${rows || '<tr><td colspan="3">記録なし</td></tr>'}</tbody></table>
+      <div class="doc-scale"><b>評価の目安（平均ズレ）</b><div class="sc"><span>0.8°以内　神の角度</span><span>1.5°以内　プロの謝罪</span><span>3°以内　社会人レベル</span><span>6°以内　要研修</span><span>それ以上　出禁</span></div><i>でたらめに押すと、平均30°前後になります</i></div>
+    </div>`;
+  } else {
   $('#fi-body').innerHTML = `<div class="fi-title">${esc(MODE[G.mode].name)}</div>
-    <div class="fi-big">${big}<small>${unit}</small></div>
+    ${bigHTML}
     <div class="fi-title" style="color:var(--gold)">${esc(title)}</div>
     ${isNew ? '<div class="fi-new">NEW RECORD</div>' : ''}
     <div class="fi-sub">${esc(sub)}</div>
     <div class="log">${logs || '<div>記録なし</div>'}</div>`;
+  }
   G.shareText = shareTextSolo(s, title, G.day);
   const lastL = G.log[G.log.length - 1] || {};
   G.card = { title: MODE[G.mode].name + (G.mode === 'daily' ? '　' + G.day : ''), big: String(big), unit, rank: title, sub, angle: lastL.angle != null ? lastL.angle : 45, target: lastL.target != null ? lastL.target : null, grade: grade(s.avg), mood: moodOf(s.avg), dojo: G.mode !== 'daily' };
@@ -1257,7 +1389,7 @@ async function shareText(text) {
 function rr(x, X, Y, w, h, r) { x.beginPath(); x.moveTo(X + r, Y); x.arcTo(X + w, Y, X + w, Y + h, r); x.arcTo(X + w, Y + h, X, Y + h, r); x.arcTo(X, Y + h, X, Y, r); x.arcTo(X, Y, X + w, Y, r); x.closePath(); }
 function cardFigure(x, hx, hy, s, angle, ghost, dojo) {
   x.save(); x.translate(hx, hy); x.scale(s, s);
-  x.strokeStyle = dojo ? 'rgba(60,35,15,.4)' : 'rgba(246,241,231,.25)'; x.lineWidth = 2; x.beginPath(); x.moveTo(-140, 84); x.lineTo(330, 84); x.stroke();
+  x.strokeStyle = dojo ? 'rgba(60,35,15,.4)' : 'rgba(30,40,60,.3)'; x.lineWidth = 2; x.beginPath(); x.moveTo(-140, 84); x.lineTo(330, 84); x.stroke();
   if (dojo) {   // 道着：白い道着、黒帯、はだし、鉢巻
     x.fillStyle = '#f1eee6'; x.strokeStyle = '#b8b2a2'; x.lineWidth = 1.6; rr(x, -11, 0, 22, 76, 9); x.fill(); x.stroke();
     x.fillStyle = '#f1c9a5'; rr(x, -15, 74, 44, 10, 5); x.fill();
@@ -1347,10 +1479,67 @@ function cardCustomer(x, cx, gy, s, mood, dojo) {
   if (mood === 'angry' || mood === 'furious') { x.strokeStyle = '#d62839'; x.lineWidth = 3; x.beginPath(); x.moveTo(20, -192); x.lineTo(26, -196); x.moveTo(22, -185); x.lineTo(30, -185); x.moveTo(20, -178); x.lineTo(26, -174); x.stroke(); }
   x.restore();
 }
+// 大きな数字と単位。単位が ° のときは、数字の右上に小さく添える（ほかの単位は、数字の右下）
+function cardBig(x, cx, base, big, unit, size, serif, sans, colBig, colUnit) {
+  const deg = unit === '°', us = deg ? size * .5 : 54, gap = deg ? 4 : 18;
+  const uf = deg ? `700 ${us}px ${serif}` : `600 ${us}px ${sans}`;
+  x.textAlign = 'left'; x.textBaseline = 'alphabetic';
+  x.font = `700 ${size}px ${serif}`; const wb = x.measureText(big).width;
+  x.font = uf; const wu = x.measureText(unit).width;
+  const sx = cx - (wb + gap + wu) / 2;
+  x.fillStyle = colBig; x.font = `700 ${size}px ${serif}`; x.fillText(big, sx, base);
+  x.fillStyle = colUnit; x.font = uf; x.fillText(unit, sx + wb + gap, deg ? base - size * .7 + us * .72 : base);
+  x.textAlign = 'center';
+}
+function fitFont(x, text, maxW, size, weight, family) {   // 横幅に収まる大きさにする
+  for (let s = size; s >= 22; s -= 2) { x.font = `${weight} ${s}px ${family}`; if (x.measureText(text).width <= maxW) return; }
+}
+// 本番謝罪のカードは、会社っぽく：上に社名の帯、明るい壁と窓と社訓、カーペット、評価書（紙）
+function drawCardOffice(x, W, H, c, serif, sans) {
+  x.fillStyle = '#cfd8e5'; x.fillRect(0, 0, W, 885);
+  x.fillStyle = '#a5b2c7'; x.fillRect(0, 885, W, 18);
+  x.fillStyle = '#58677f'; x.fillRect(0, 903, W, H - 903);
+  x.strokeStyle = '#4d5b73'; x.lineWidth = 2; x.beginPath();
+  for (let gx = 0; gx <= W; gx += 60) { x.moveTo(gx, 903); x.lineTo(gx, H); }
+  for (let gy = 943; gy <= H; gy += 40) { x.moveTo(0, gy); x.lineTo(W, gy); }
+  x.stroke();
+  x.fillStyle = '#1f3568'; x.fillRect(0, 0, W, 300); x.fillStyle = '#e9b44c'; x.fillRect(0, 300, W, 8);
+  x.textAlign = 'center'; x.textBaseline = 'alphabetic';
+  x.fillStyle = '#f6f1e7'; x.font = `700 100px ${serif}`; x.fillText('謝罪道場', W / 2, 172);
+  x.fillStyle = '#e9b44c'; fitFont(x, c.title, W - 120, 40, 600, sans); x.fillText(c.title, W / 2, 250);
+  // 窓
+  x.fillStyle = '#f4f7fb'; rr(x, 80, 380, 240, 300, 8); x.fill();
+  x.fillStyle = '#a9d5ff'; x.fillRect(96, 396, 208, 268);
+  x.fillStyle = '#7690b3'; x.fillRect(110, 540, 40, 124); x.fillRect(214, 560, 34, 104);
+  x.fillStyle = '#5d7aa1'; x.fillRect(160, 480, 44, 184); x.fillStyle = '#6784aa'; x.fillRect(256, 500, 44, 164);
+  x.fillStyle = '#f4f7fb'; x.fillRect(196, 396, 8, 268); x.fillRect(96, 524, 208, 8);
+  // 社訓
+  x.fillStyle = '#6b5236'; rr(x, 770, 340, 250, 150, 6); x.fill();
+  x.fillStyle = '#f6f1e7'; x.fillRect(790, 358, 210, 114);
+  x.fillStyle = '#6a7790'; x.font = `500 24px ${sans}`; x.fillText('社訓', 895, 392);
+  x.fillStyle = '#33405a'; x.font = `700 64px ${serif}`; x.fillText('誠意', 895, 452);
+  cardFigure(x, 360, 735, 2, c.angle, c.target, false);
+  cardCustomer(x, 800, 903, 2, c.mood, false);
+  // 評価書（紙）
+  x.save(); x.shadowColor = 'rgba(20,30,55,.4)'; x.shadowBlur = 26; x.shadowOffsetY = 8;
+  x.fillStyle = '#fbfaf6'; rr(x, 64, 944, W - 128, 352, 14); x.fill(); x.restore();
+  x.fillStyle = '#1f3568'; x.fillRect(64, 944, W - 128, 10);
+  x.fillStyle = '#5a6a86'; x.font = `500 30px ${sans}`; x.fillText('誤差の合計', W / 2, 1000);
+  cardBig(x, W / 2, 1158, c.big, c.unit, 190, serif, sans, '#1b2a4e', '#1b2a4e');
+  x.fillStyle = '#a3261f'; x.font = `700 58px ${serif}`; x.fillText(c.rank, W / 2, 1226);
+  x.fillStyle = '#5a6a86'; fitFont(x, c.sub, W - 190, 32, 500, sans); x.fillText(c.sub, W / 2, 1274);
+  // ハンコ
+  x.save(); x.translate(918, 1052); x.rotate(-14 * Math.PI / 180);
+  x.strokeStyle = '#d62839'; x.fillStyle = '#d62839'; x.lineWidth = 7; x.beginPath(); x.arc(0, 0, 66, 0, 7); x.stroke();
+  x.lineWidth = 2.2; x.beginPath(); x.arc(0, 0, 57, 0, 7); x.stroke();
+  x.font = `700 ${c.grade.label.length > 2 ? 28 : 38}px ${serif}`; x.textBaseline = 'middle'; x.fillText(c.grade.label, 0, 2); x.restore();
+  x.textBaseline = 'alphabetic'; x.fillStyle = 'rgba(246,241,231,.88)'; x.font = `500 28px ${sans}`; x.fillText('スマホを傾けて、誠意の角度を測ろう', W / 2, 1334);
+}
 function drawCard(c) {
   const W = 1080, H = 1350, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const x = cv.getContext('2d');
   const serif = '"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif', sans = '"Hiragino Sans","Yu Gothic UI","Noto Sans JP",sans-serif';
+  if (!c.dojo) { drawCardOffice(x, W, H, c, serif, sans); return cv; }
   const bg = x.createLinearGradient(0, 0, 0, H); if (c.dojo) { bg.addColorStop(0, '#6e4426'); bg.addColorStop(1, '#2e1b0d'); } else { bg.addColorStop(0, '#1f3568'); bg.addColorStop(1, '#0d1630'); }
   x.fillStyle = bg; x.fillRect(0, 0, W, H);
   x.strokeStyle = 'rgba(246,241,231,.22)'; x.lineWidth = 3; rr(x, 36, 36, W - 72, H - 72, 40); x.stroke();
@@ -1365,12 +1554,7 @@ function drawCard(c) {
   x.lineWidth = 2.5; x.beginPath(); x.arc(0, 0, 66, 0, 7); x.stroke();
   x.font = `700 ${c.grade.label.length > 2 ? 34 : 44}px ${serif}`; x.textBaseline = 'middle'; x.fillText(c.grade.label, 0, 2); x.restore();
   // 数字
-  x.textBaseline = 'alphabetic'; x.textAlign = 'left';
-  x.font = `700 210px ${serif}`; const wb = x.measureText(c.big).width;
-  x.font = `600 54px ${sans}`; const wu = x.measureText(c.unit).width;
-  const sx = (W - (wb + 18 + wu)) / 2;
-  x.fillStyle = '#e9b44c'; x.font = `700 210px ${serif}`; x.fillText(c.big, sx, 1130);
-  x.fillStyle = '#f6f1e7'; x.font = `600 54px ${sans}`; x.fillText(c.unit, sx + wb + 18, 1130);
+  cardBig(x, W / 2, 1130, c.big, c.unit, 210, serif, sans, '#e9b44c', '#f6f1e7');
   x.textAlign = 'center';
   x.fillStyle = '#f6f1e7'; x.font = `700 62px ${serif}`; x.fillText(c.rank, W / 2, 1210);
   x.fillStyle = '#9aa6c2'; x.font = `500 34px ${sans}`; x.fillText(c.sub, W / 2, 1268);
@@ -1673,6 +1857,8 @@ function onNetMsg(m) {
       G = { kind: 'online', targets: m.targets, rounds: m.rounds, blind: m.blind, round: -1, total: 0, streak: 0, locked: [] };
       R = null; sheet(null); updateHeader(); renderPlayers();
       $('#g-tname').textContent = '準備'; $('#g-tnum').textContent = '--'; setTargetArc(0);
+      FIG.classList.remove('practice', 'sc-office', 'hardmode'); FIG.classList.add('sc-dojo', 'sensei', 'hardmode'); $('#s-game').classList.remove('th-office');   // 最初のお題の前から、道場の絵
+      setTorso(0, false); setMood('wait', false); vsApply(); vsRound();
       show('s-game');
       break;
     case 'round':
@@ -1691,6 +1877,7 @@ function onNetMsg(m) {
 }
 function renderPlayers() {
   if (!G || G.kind !== 'online') return;
+  vsApply(); vsMarks();
   $('#g-players').innerHTML = Net.players.map(p => `<span class="${G.locked.includes(p.id) ? 'ok' : ''}">${G.locked.includes(p.id) ? '✓ ' : ''}${esc(p.name)}</span>`).join('');
 }
 function onlineLocked() {
@@ -1702,6 +1889,7 @@ function onlineResult(m) {
   const rows = [...m.rows].sort((a, b) => a.total - b.total);
   const me = m.rows.find(r => r.id === Net.myId);
   if (me) { G.total = me.total; G.streak = me.err <= 1.5 && !me.miss ? G.streak + 1 : 0; updateHeader(); }
+  vsReveal(m.rows);
   const tr = rows.map((r, i) => `<tr class="${r.id === Net.myId ? 'me' : ''}"><td>${i + 1}</td><td>${esc(r.name)}</td><td class="${r.miss ? 'miss' : ''}">${r.miss ? '時間切れ' : sgf(r.angle) + '°'}</td><td>${r.err.toFixed(1)}</td><td>${fmt(r.total)}</td></tr>`).join('');
   sheet(`${me ? stampHTML(me.err) : ''}<div class="sh-verdict">${m.n + 1} / ${G.rounds} 回目　お題 ${sg(m.target)}°</div>
     <table class="tbl"><thead><tr><th>順</th><th>名前</th><th>角度</th><th>ズレ</th><th>合計</th></tr></thead><tbody>${tr}</tbody></table>
