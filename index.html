@@ -648,6 +648,8 @@ try {
   S = Object.assign(S, j);
   S.params = Object.assign({ survival: 10, nomiss: 3, score: 5 }, j.params || {});
   S.best = j.best || {};
+  // 古い形のベスト（部門を分ける前）を、部門ごとの形に移す：スライダーで遊んでいた端末と、パソコンは、スライダー部門。それ以外のタッチ端末（スマホ）は、センサー部門
+  for (const k of Object.keys(S.best)) if (/^(survival|nomiss|score)_\d+$/.test(k)) { const nk = k + '_' + (S.input !== 'slider' && (navigator.maxTouchPoints || 0) > 0 ? 'sensor' : 'slider'); if (!S.best[nk]) S.best[nk] = S.best[k]; delete S.best[k]; }
   // 古い形の記録（部門を分ける前）を、新しい形（部門ごと）に移す
   if (S.dailyRec) { S.dailyRecs = S.dailyRecs || {}; S.dailyRecs[S.dailyRec.kind || 'slider'] = S.dailyRec; delete S.dailyRec; }
   if (S.dailyTop) { S.dailyTops = S.dailyTops || {}; S.dailyTops[S.dailyTop.kind || 'slider'] = { day: S.dailyTop.day, total: S.dailyTop.total }; delete S.dailyTop; }
@@ -1643,24 +1645,24 @@ $('#m-how-ok').onclick = () => { $('#m-how').hidden = true; S.seenHow = true; sa
 if (!S.seenHow) $('#m-how').hidden = false;
 
 /* ---------- 一人で ---------- */
-const bestKey = m => m === 'daily' ? `daily_${dailyId()}` : `${m}_${FIXED[m]}`;
-function bestText(m) {
-  const b = S.best[bestKey(m)];
-  if (!b) return m === 'daily' ? `今日（${dailyId()}）はまだ挑戦していません` : '';
+const bestKey = (m, kind) => m === 'daily' ? `daily_${dailyId()}` : `${m}_${FIXED[m]}_${kind}`;   // 本番謝罪以外は、部門（sensor / slider）ごと
+function bestText(m, kind) {
+  const b = S.best[bestKey(m, kind)];
+  if (!b) return m === 'daily' ? `今日（${dailyId()}）はまだ挑戦していません` : 'まだ記録なし';
   if (m === 'daily') return `今日のベスト：合計 ${fmt(b.total)}°`;
-  if (m === 'survival') return `ベスト：${b.cleared}ステージ（合計 ${fmt(b.total)}°）`;
-  if (m === 'nomiss') return `ベスト：${b.cleared}連続`;
-  if (m === 'score') return `ベスト：合計 ${fmt(b.total)}°`;
+  if (m === 'survival') return `${b.cleared}ステージ（合計 ${fmt(b.total)}°）`;
+  if (m === 'nomiss') return `${b.cleared}連続`;
+  if (m === 'score') return `合計 ${fmt(b.total)}°`;
   return '';
 }
+const bestLines = m => DKINDS.map(k => `<div>ベスト（${KINDS[k]}）：${esc(bestText(m, k))}</div>`).join('');   // センサー部門とスライダー部門を、別の行に
 function buildSolo() {
   const list = $('#so-list'); list.innerHTML = '';
   MODES.filter(m => m.key !== 'daily').forEach(m => {
     const c = document.createElement('div'); c.className = 'card';
     c.innerHTML = `<h3>${m.name}</h3><p>${m.desc}</p>${m.fixed || m.key === 'daily' ? '<div class="best"></div>' : ''}<button class="btn primary">始める</button>`;
     const best = $('.best', c);
-    if (m.key === 'daily') best.textContent = bestText('daily');
-    if (m.fixed) best.textContent = bestText(m.key);
+    if (m.fixed) best.innerHTML = bestLines(m.key);
     $('.btn', c).onclick = () => startSolo(m.key);
     list.appendChild(c);
   });
@@ -1711,6 +1713,7 @@ function soloLocked() {
   if (G.base === 'survival') { if (G.total >= G.param) over = true; else G.cleared++; }
   else if (G.base === 'nomiss') { if (err > G.param) over = true; else G.cleared++; }
   else if (G.base === 'score') { G.cleared++; if (G.round >= G.param) done = true; }
+  if (G.mode !== 'daily') G.input = (G.input === 'slider' || sliderMode()) ? 'slider' : 'sensor';   // ベストは、センサー部門とスライダー部門で、別に持つ
   if (G.mode === 'daily') {   // 1問ごとに保存する。途中でやめても続きから。5問目で、今回の記録が確定する
     const n = G.log.length, prevK = G.input;
     // 入力方式：1問でもスライダーを使ったら、全体が「スライダー部門」。ぜんぶセンサーのときだけ「センサー部門」
@@ -1758,7 +1761,7 @@ function finishSolo(over) {
   track('play_finish_' + G.mode);
   const s = summarySolo(over);
   let isNew = false;
-  const k = bestKey(G.mode), b = S.best[k];
+  const k = bestKey(G.mode, G.input || curKind()), b = S.best[k];
   if (G.base === 'survival') { if (!b || s.cleared > b.cleared || (s.cleared === b.cleared && s.total < b.total)) { S.best[k] = { cleared: s.cleared, total: s.total }; isNew = s.cleared > 0; } }
   else if (G.base === 'nomiss') { if (!b || s.cleared > b.cleared) { S.best[k] = { cleared: s.cleared, total: s.total }; isNew = s.cleared > 0; } }
   else if (G.base === 'score') { if (!b || s.total < b.total) { S.best[k] = { total: s.total }; isNew = true; } }
