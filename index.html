@@ -153,7 +153,9 @@ svg .tarc{fill:none;stroke:#e0245e;stroke-width:4.2;stroke-linecap:round}
 .g-info{font-weight:700;letter-spacing:.06em}
 .g-sub{font-size:13px;color:#5b4a3a;font-variant-numeric:tabular-nums}
 .g-bar{height:5px;background:rgba(27,34,54,.15);border-radius:3px;overflow:hidden;margin-top:4px}
-.g-bar i{display:block;height:100%;width:0;background:var(--red);transition:width .3s}
+.g-bar i{display:block;height:100%;width:0;background:var(--red);transition:width .3s,background .3s}
+.g-bar.hp{height:11px;border-radius:6px;background:rgba(27,34,54,.28);box-shadow:inset 0 0 0 1.5px rgba(27,34,54,.25)}
+.g-bar.hp i{border-radius:6px}
 .g-timer{width:40px;text-align:right;font-size:14px;font-weight:700;color:var(--gt);text-shadow:0 1px 3px rgba(0,0,0,.25);font-variant-numeric:tabular-nums;position:relative;z-index:3}
 .g-target{align-self:center;text-align:center;margin-top:2px;position:relative;z-index:3;background:rgba(246,241,231,.95);border:2px solid var(--gp);border-radius:16px;padding:6px 28px 6px;box-shadow:0 3px 10px rgba(0,0,0,.2)}
 .chip{display:inline-block;background:var(--red);color:#fff;font-weight:700;font-size:14px;padding:2px 14px;border-radius:20px;letter-spacing:.2em}
@@ -632,11 +634,12 @@ const DAILY_ONCE = true;
 const MODES = [
   { key: 'daily', name: '1日1回限り　本番謝罪', desc: '今日は全員が同じ5問。誤差の合計で、順位がつきます。' },
   { key: 'practice', name: '練習', desc: 'ゆっくり練習。このモードは終わりがありません。' },
-  { key: 'survival', name: 'サバイバル', desc: '誤差の合計が上限に達したらアウト。何ステージ突破できる？', p: { label: '上限（誤差の合計）', min: 2, max: 60, step: 1, unit: '°' } },
-  { key: 'nomiss', name: 'ノーミス', desc: '1回でも許容誤差を超えたらアウト。何連続で決められる？', p: { label: '許容する誤差', min: 1, max: 15, step: 0.5, unit: '°' } },
-  { key: 'score', name: 'スコアアタック', desc: '決まった回数の誤差の合計で勝負。少ないほど立派。', p: { label: '回数', min: 1, max: 30, step: 1, unit: '回' } },
+  { key: 'survival', name: 'サバイバル', desc: 'HPは30。ズレたぶんだけ減っていき、0になったらアウト。何ステージ突破できる？', fixed: true },
+  { key: 'nomiss', name: 'ノーミス', desc: 'ズレが5°を超えたらアウト。1回成功するごとに、称号が上がっていく。何連続で決められる？', fixed: true },
+  { key: 'score', name: 'スコアアタック', desc: '5回の誤差の合計で勝負。少ないほど立派。', fixed: true },
 ];
 const MODE = Object.fromEntries(MODES.map(m => [m.key, m]));
+const FIXED = { survival: 30, nomiss: 5, score: 5 };   // ルールは固定（サバイバルのHP、ノーミスの許容誤差、スコアアタックの回数）
 
 /* ---------- 広告 ----------
    Google AdSense の「ca-pub-…」と広告ユニットの slot ID を入れると、メニューと結果画面にだけ広告が出ます。
@@ -1000,6 +1003,9 @@ const GRADES = [[0.5, 'S', '完璧'], [1.5, 'A', '合格'], [3, 'B', '許す'], 
 const grade = e => { const g = GRADES.find(x => e <= x[0]); return { rank: g[1], label: g[2] }; };
 const stampHTML = e => { const g = grade(e); return `<div class="stamp r-${g.rank}"><span>${g.label}</span></div>`; };
 const scene = t => t < 0 ? 'もはや謝罪ではない' : t <= 12 ? '軽く会釈' : t <= 20 ? 'すれ違いのご挨拶' : t <= 28 ? 'お客様のお出迎え' : t <= 36 ? 'ちょっとした遅刻のお詫び' : t <= 46 ? 'ミスをしたときのお詫び' : t <= 56 ? '取引先への正式なお詫び' : t <= 66 ? '会社を揺るがすミス' : t <= 76 ? '世間を騒がせてしまった' : t <= 84 ? '社長と並んで謝罪会見' : 'もう土下座しかない';
+// ノーミス：1回成功するごとに、称号が1つ上がる（会社の出世。0回は出禁）
+const LADDER = ['出禁', '研修生', '新入社員', '平社員', '主任', '係長', '課長補佐', '課長', '次長', '部長', '事業部長', '執行役員', '取締役', '常務', '専務', '副社長', '社長', '会長', '相談役', '謝罪会見の達人', '謝罪の神様'];
+const titleNomiss = n => LADDER[Math.min(Math.max(n, 0), LADDER.length - 1)];
 const titleN = n => n >= 20 ? '謝罪会見の達人' : n >= 15 ? '部長クラス' : n >= 10 ? '中堅社員' : n >= 6 ? '新入社員' : n >= 3 ? '要研修' : '出禁';
 // 称号とハンコ：誤差の合計（5問の合計。問の数がちがうときは、平均×5）で決める。[上限, 前につく言葉, 称号]
 const TITLES = [[5, '謝罪の', '神様'], [10, '謝罪の', '天才'], [20, '謝罪の', '逸材'], [30, '謝罪の', '秀才'], [50, '謝罪の', '凡才'], [70, '', '半人前'], [90, '', '能無し'], [120, '', '論外'], [Infinity, '', '出禁']];
@@ -1170,11 +1176,15 @@ function sheet(html) {
 /* ---------- ヘッダ ---------- */
 function updateHeader() {
   if (!G) return;
-  const bar = $('#g-bar'), box = $('#g-barbox'); box.hidden = true;
+  const bar = $('#g-bar'), box = $('#g-barbox'); box.hidden = true; box.classList.remove('hp'); bar.style.background = '';
   let l = '', r = '';
   if (G.kind === 'online') { l = `${Math.max(G.round + 1, 1)} / ${G.rounds} 回目`; r = `合計 ${fmt(r1(G.total))}°`; }
-  else if (G.base === 'survival') { l = `STAGE ${G.round}`; r = `合計 ${fmt(r1(G.total))} / ${G.param}°`; box.hidden = false; bar.style.width = clamp(G.total / G.param * 100, 0, 100) + '%'; }
-  else if (G.base === 'nomiss') { l = `STAGE ${G.round}`; r = `許容 ±${fmt(G.param)}°　連続 ${G.cleared}`; }
+  else if (G.base === 'survival') {   // HP：ズレたぶんだけ減る。緑→黄→赤
+    const hp = Math.max(0, r1(G.param - G.total)), ratio = clamp(hp / G.param, 0, 1);
+    l = `STAGE ${G.round}`; r = `HP ${fmt(hp)} / ${G.param}`; box.hidden = false; box.classList.add('hp');
+    bar.style.width = ratio * 100 + '%'; bar.style.background = ratio > .5 ? 'var(--ok)' : ratio > .25 ? '#e9b44c' : 'var(--red)';
+  }
+  else if (G.base === 'nomiss') { l = `STAGE ${G.round}`; r = `${G.cleared}連続　${titleNomiss(G.cleared)}`; }
   else if (G.base === 'score') { l = `${G.mode === 'daily' ? '本番謝罪　' : ''}${G.round} / ${G.param} 回目`; r = `合計 ${fmt(r1(G.total))}°`; }
   else { l = '練習'; r = `${G.round}回目　合計 ${fmt(r1(G.total))}°`; }
   if (G.streak >= 2) r += `　連続◎${G.streak}`;
@@ -1228,7 +1238,7 @@ $('#m-how-ok').onclick = () => { $('#m-how').hidden = true; S.seenHow = true; sa
 if (!S.seenHow) $('#m-how').hidden = false;
 
 /* ---------- 一人で ---------- */
-const bestKey = m => m === 'daily' ? `daily_${dailyId()}` : `${m}_${S.params[m]}`;
+const bestKey = m => m === 'daily' ? `daily_${dailyId()}` : `${m}_${FIXED[m]}`;
 function bestText(m) {
   const b = S.best[bestKey(m)];
   if (!b) return m === 'daily' ? `今日（${dailyId()}）はまだ挑戦していません` : '';
@@ -1242,13 +1252,10 @@ function buildSolo() {
   const list = $('#so-list'); list.innerHTML = '';
   MODES.filter(m => m.key !== 'daily').forEach(m => {
     const c = document.createElement('div'); c.className = 'card';
-    c.innerHTML = `<h3>${m.name}</h3><p>${m.desc}</p>${m.p ? `<div class="prm"><span>${m.p.label}</span><div class="stepper"></div></div>` : ''}${m.p || m.key === 'daily' ? '<div class="best"></div>' : ''}<button class="btn primary">始める</button>`;
+    c.innerHTML = `<h3>${m.name}</h3><p>${m.desc}</p>${m.fixed || m.key === 'daily' ? '<div class="best"></div>' : ''}<button class="btn primary">始める</button>`;
     const best = $('.best', c);
     if (m.key === 'daily') best.textContent = bestText('daily');
-    if (m.p) {
-      stepper($('.stepper', c), { min: m.p.min, max: m.p.max, step: m.p.step, unit: m.p.unit, get: () => S.params[m.key], set: x => { S.params[m.key] = x; save(); best.textContent = bestText(m.key); } });
-      best.textContent = bestText(m.key);
-    }
+    if (m.fixed) best.textContent = bestText(m.key);
     $('.btn', c).onclick = () => startSolo(m.key);
     list.appendChild(c);
   });
@@ -1272,7 +1279,7 @@ function startSolo(mode) {
     }
     forceSlider = dk === 'slider';   // スライダー部門は、センサーがある端末でも、スライダーで遊ぶ
   }
-  G = { kind: 'solo', mode, base: daily ? 'score' : mode, param: daily ? 5 : S.params[mode], round: 0, total: 0, cleared: 0, log: [], prev: null, autoT: 0, streak: 0, day, targets: daily ? dailyTargets(day) : null, input: daily ? dk : null };
+  G = { kind: 'solo', mode, base: daily ? 'score' : mode, param: daily ? 5 : FIXED[mode], round: 0, total: 0, cleared: 0, log: [], prev: null, autoT: 0, streak: 0, day, targets: daily ? dailyTargets(day) : null, input: daily ? dk : null };
   if (rec && rec.log.length) {   // 途中でやめていたら、答えた分はそのまま、続きから
     G.log = rec.log.map(l => ({ target: l.target, angle: l.angle, err: l.err }));
     G.total = rec.total; G.round = G.log.length; G.cleared = G.log.length;
@@ -1315,12 +1322,17 @@ function soloLocked() {
   const dirTxt = err < 0.05 ? 'ぴったり' : target < 0 ? (angle < target ? '反りすぎ' : '反りが足りない') : (angle < target ? '浅い' : '深い');
   const end = over || done;
   let totalLine = '';
-  if (G.base === 'survival') totalLine = `合計 ${fmt(G.total)} / ${G.param}°`;
-  else if (G.base === 'nomiss') totalLine = err > G.param ? `許容 ±${fmt(G.param)}° を超えました` : `許容 ±${fmt(G.param)}° 以内：${G.cleared}連続`;
+  let promo = '';
+  if (G.base === 'survival') { const hp = Math.max(0, r1(G.param - G.total)); totalLine = hp <= 0 ? 'HPが0になりました' : `HP ${fmt(hp)} / ${G.param}${err > 0 ? `（−${err.toFixed(1)}）` : '（減りませんでした）'}`; }
+  else if (G.base === 'nomiss') {
+    totalLine = err > G.param ? `ズレが ${fmt(G.param)}° を超えました。最終称号：${titleNomiss(G.cleared)}` : `${G.cleared}連続成功`;
+    if (err <= G.param) promo = `<div class="sh-meta" style="color:#a3261f;font-weight:700">昇進！ ${esc(titleNomiss(G.cleared))}</div>`;
+  }
   else totalLine = `合計 ${fmt(G.total)}°`;
   sheet(`${stampHTML(err)}<div class="sh-verdict">${esc(verdict(err))}</div>
     <div class="sh-cmp"><div><small>お題</small><b>${sg(target)}°</b></div><div><small>あなた</small><b>${sgf(angle)}°</b></div><div><small>ズレ</small><b>${err.toFixed(1)}°</b></div></div>
     <div class="sh-meta">${dirTxt === 'ぴったり' ? 'ぴったり！' : target < 0 ? `お題より${dirTxt}でした` : `お題より${dirTxt}お辞儀でした`}</div>
+    ${promo}
     <div class="sh-total">${esc(totalLine)}</div>
     <button class="btn primary sh-btn" id="sh-next">${end ? '結果を見る' : '次へ'}</button>`);
   $('#sh-next').onclick = () => { end ? finishSolo(over) : nextSolo(); };
@@ -1340,8 +1352,8 @@ function finishSolo(over) {
   if (G.mode === 'daily') isNew = false;   // 本番謝罪は、ランキングで見せる
   save();
   let big = '', unit = '', title = '', sub = '';
-  if (G.base === 'survival') { big = s.cleared; unit = 'ステージ突破'; title = titleN(s.cleared); sub = `誤差の合計 ${fmt(s.total)}° / 上限 ${s.param}°`; }
-  else if (G.base === 'nomiss') { big = s.cleared; unit = '連続成功'; title = titleN(s.cleared); sub = `許容 ±${fmt(s.param)}°`; }
+  if (G.base === 'survival') { big = s.cleared; unit = 'ステージ突破'; title = titleN(s.cleared); sub = `誤差の合計 ${fmt(s.total)}° でHPが尽きました`; }
+  else if (G.base === 'nomiss') { big = s.cleared; unit = '連続成功'; title = titleNomiss(s.cleared); sub = `ズレ ${fmt(s.param)}° 以内を ${s.cleared} 連続`; }
   else if (G.base === 'score') { big = fmt(s.total); unit = '°'; title = titleAvg(s.avg); sub = `${G.mode === 'daily' ? G.day + '　' : ''}${s.param}回の誤差の合計（平均 ${fmt(s.avg)}°）`; }
   else { big = fmt(s.avg); unit = '° 平均'; title = '練習終了'; sub = `${s.rounds}回　合計 ${fmt(s.total)}°`; }
   const logs = G.log.map((l, i) => `<div><span>${i + 1}. お題 ${sg(l.target)}°</span><span>${sgf(l.angle)}°（ズレ ${l.err.toFixed(1)}）</span></div>`).join('');
@@ -1361,13 +1373,14 @@ function finishSolo(over) {
   $('#fi-body').innerHTML = `<div class="fi-title">${esc(MODE[G.mode].name)}</div>
     ${bigHTML}
     <div class="fi-title" style="color:var(--gold)">${esc(title)}</div>
+    ${G.base === 'nomiss' && s.cleared > 0 ? `<div class="fi-sub">昇進：${s.cleared > 4 ? '… → ' : ''}${LADDER.slice(Math.max(0, s.cleared - 4), s.cleared + 1).map(esc).join(' → ')}</div>` : ''}
     ${isNew ? '<div class="fi-new">NEW RECORD</div>' : ''}
     <div class="fi-sub">${esc(sub)}</div>
     <div class="log">${logs || '<div>記録なし</div>'}</div>`;
   }
   G.shareText = shareTextSolo(s, title, G.day);
   const lastL = G.log[G.log.length - 1] || {};
-  G.card = { title: MODE[G.mode].name + (G.mode === 'daily' ? '　' + G.day : ''), big: String(big), unit, rank: title, sub, angle: lastL.angle != null ? lastL.angle : 45, target: lastL.target != null ? lastL.target : null, grade: stampOfAvg(s.avg), mood: moodOf(s.avg), dojo: G.mode !== 'daily' };
+  G.card = { title: MODE[G.mode].name + (G.mode === 'daily' ? '　' + G.day : ''), big: String(big), unit, rank: title, sub, angle: lastL.angle != null ? lastL.angle : 45, target: lastL.target != null ? lastL.target : null, grade: G.base === 'nomiss' ? { pre: '', label: title } : stampOfAvg(s.avg), mood: moodOf(s.avg), dojo: G.mode !== 'daily' };
   $('#fi-again').textContent = 'もう一度'; $('#fi-again').hidden = false; $('#fi-again').onclick = () => startSolo(G.mode);
   const daily = G.mode === 'daily';
   $('#fi-again').hidden = daily && DAILY_ONCE;   // 本番謝罪を1日1回にしたときだけ、「もう一度」を隠す
@@ -1380,8 +1393,8 @@ function finishSolo(over) {
 function shareTextSolo(s, title, day) {
   const name = MODE[s.mode].name;
   if (s.mode === 'daily') return `【謝罪道場】本番謝罪 ${day}：誤差の合計 ${fmt(s.total)}°（平均 ${fmt(s.avg)}°）！称号：${title}`;
-  if (s.mode === 'survival') return `【謝罪道場】${name}（上限${s.param}°）で${s.cleared}ステージ突破！称号：${title}`;
-  if (s.mode === 'nomiss') return `【謝罪道場】${name}（許容±${fmt(s.param)}°）で${s.cleared}連続成功！称号：${title}`;
+  if (s.mode === 'survival') return `【謝罪道場】${name}（HP${s.param}）で${s.cleared}ステージ突破！称号：${title}`;
+  if (s.mode === 'nomiss') return `【謝罪道場】${name}（ズレ${fmt(s.param)}°以内）で${s.cleared}連続成功！称号：${title}`;
   if (s.mode === 'score') return `【謝罪道場】${name}（${s.param}回）の誤差の合計は${fmt(s.total)}°！称号：${title}`;
   return `【謝罪道場】練習中`;
 }
@@ -1500,6 +1513,15 @@ function fitFont(x, text, maxW, size, weight, family) {   // 横幅に収まる�
   for (let s = size; s >= 22; s -= 2) { x.font = `${weight} ${s}px ${family}`; if (x.measureText(text).width <= maxW) return; }
 }
 // 本番謝罪のカードは、会社っぽく：上に社名の帯、明るい壁と窓と社訓、カーペット、評価書（紙）
+// ハンコの文字。前につく言葉（pre）があれば2段。長い称号は、半分に分けて2段
+function drawStamp(x, g, serif, R) {
+  let pre = g.pre || '', lab = g.label;
+  if (!pre && lab.length > 4) { const h = Math.ceil(lab.length / 2); pre = lab.slice(0, h); lab = lab.slice(h); }
+  const W = R * 1.5, fit = (t, m) => Math.min(m, Math.floor(W / Math.max(2, t.length)));
+  x.textBaseline = 'middle';
+  if (pre) { x.font = `700 ${fit(pre, R * .3)}px ${serif}`; x.fillText(pre, 0, -R * .26); x.font = `700 ${fit(lab, R * .55)}px ${serif}`; x.fillText(lab, 0, R * .21); }
+  else { x.font = `700 ${fit(lab, R * .6)}px ${serif}`; x.fillText(lab, 0, R * .03); }
+}
 function drawCardOffice(x, W, H, c, serif, sans) {
   x.fillStyle = '#cfd8e5'; x.fillRect(0, 0, W, 885);
   x.fillStyle = '#a5b2c7'; x.fillRect(0, 885, W, 18);
@@ -1537,9 +1559,7 @@ function drawCardOffice(x, W, H, c, serif, sans) {
   x.save(); x.translate(918, 1052); x.rotate(-14 * Math.PI / 180);
   x.strokeStyle = '#d62839'; x.fillStyle = '#d62839'; x.lineWidth = 7; x.beginPath(); x.arc(0, 0, 66, 0, 7); x.stroke();
   x.lineWidth = 2.2; x.beginPath(); x.arc(0, 0, 57, 0, 7); x.stroke();
-  x.textBaseline = 'middle';
-  if (c.grade.pre) { x.font = `700 20px ${serif}`; x.fillText(c.grade.pre, 0, -17); x.font = `700 36px ${serif}`; x.fillText(c.grade.label, 0, 14); }
-  else { x.font = `700 ${c.grade.label.length > 2 ? 30 : 40}px ${serif}`; x.fillText(c.grade.label, 0, 2); }
+  drawStamp(x, c.grade, serif, 66);
   x.restore();
   x.textBaseline = 'alphabetic'; x.fillStyle = 'rgba(246,241,231,.88)'; x.font = `500 28px ${sans}`; x.fillText('スマホを傾けて、誠意の角度を測ろう', W / 2, 1334);
 }
@@ -1560,9 +1580,7 @@ function drawCard(c) {
   x.save(); x.translate(915, 250); x.rotate(-14 * Math.PI / 180);
   x.strokeStyle = '#d62839'; x.fillStyle = '#d62839'; x.lineWidth = 8; x.beginPath(); x.arc(0, 0, 76, 0, 7); x.stroke();
   x.lineWidth = 2.5; x.beginPath(); x.arc(0, 0, 66, 0, 7); x.stroke();
-  x.textBaseline = 'middle';
-  if (c.grade.pre) { x.font = `700 24px ${serif}`; x.fillText(c.grade.pre, 0, -20); x.font = `700 42px ${serif}`; x.fillText(c.grade.label, 0, 16); }
-  else { x.font = `700 ${c.grade.label.length > 2 ? 34 : 44}px ${serif}`; x.fillText(c.grade.label, 0, 2); }
+  drawStamp(x, c.grade, serif, 76);
   x.restore();
   // 数字
   cardBig(x, W / 2, 1130, c.big, c.unit, 210, serif, sans, '#e9b44c', '#f6f1e7');
