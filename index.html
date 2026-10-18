@@ -174,6 +174,16 @@ svg .tarc{fill:none;stroke:#e0245e;stroke-width:4.2;stroke-linecap:round}
 .g-stage svg.sc-shop .bgs.st-shop,.g-stage svg.sc-res .bgs.st-res,.g-stage svg.sc-river .bgs.st-river{display:inline}
 .g-stage svg.sc-street .ground{stroke:rgba(30,40,60,.25)}
 .g-stage svg.sc-street .cust,.g-stage svg.sc-street .mannequin{display:none}
+.g-stage svg.sc-street .pl .suit{fill:#4f86c6}
+.g-stage svg.sc-street .pl .arm{fill:#3f73b0}
+.g-stage svg.sc-street .pl .leg{fill:#3a4f78}
+.g-stage svg.sc-street .pl .shoe{fill:#f4f4f4;stroke:#b8b8c0;stroke-width:1.4}
+.g-stage svg.sc-street .pl .shirt,.g-stage svg.sc-street .pl .lanyard,.g-stage svg.sc-street .pl .idcard,.g-stage svg.sc-street .pl .idband{display:none}
+.g-stage svg.sc-street .pl .collar{fill:#6fa3dc}
+.g-stage svg.sc-street .pl .tie{fill:#f6f1e7}
+.g-stage svg.sc-street .pl .lapel{stroke:#cfe3f7;stroke-width:1.6}
+.g-stage svg.sc-street .pl .bag,.g-stage svg.sc-street .pl .bag rect:first-of-type{fill:#e9833a}
+.g-stage svg.sc-street .pl .bag path{stroke:#c96a1f}
 .stopp{transform-box:fill-box;transform-origin:50% 100%}
 .stopp.enter{animation:stEnter .9s ease-out}
 .stopp.leave{animation:stLeave .8s ease-in forwards}
@@ -988,8 +998,7 @@ return { CHARS, SCENES, SCALE, GROUPS, charSVG, DEFS: `<defs><linearGradient id=
 })();
 /* STREET:END */
 const SERIF = `font-family="'Hiragino Mincho ProN','Yu Mincho','Noto Serif JP',serif" font-weight="700"`;
-const sceneSVG = () => `
-    <g class="bgs dojo">
+const dojoBgInner = () => `
       <rect x="-600" y="-600" width="1500" height="832" fill="#f6f2e8"/>
       <rect x="-600" y="104" width="1500" height="118" fill="#6e4426"/>
       <path d="${dojoSlatPath()}" stroke="#4a2c18" stroke-width="2.2" fill="none"/>
@@ -1006,7 +1015,9 @@ const sceneSVG = () => `
         <text x="165" y="58" text-anchor="middle" font-size="9.5" ${SERIF} fill="#555">誠</text><text x="165" y="70" text-anchor="middle" font-size="9.5" ${SERIF} fill="#555">心</text><text x="165" y="82" text-anchor="middle" font-size="9.5" ${SERIF} fill="#555">誠</text><text x="165" y="94" text-anchor="middle" font-size="9.5" ${SERIF} fill="#555">意</text></g>
       <g><rect x="138" y="170" width="13" height="30" fill="#b9936a"/><rect x="140" y="172" width="9" height="26" fill="#a98763"/></g>
       <g><path d="M184 200V184M184 190Q179 182 181 176M184 188Q190 180 188 174" stroke="#4b8a43" stroke-width="2" fill="none"/><circle cx="181" cy="173" r="4.2" fill="#f2d24b"/><circle cx="189" cy="172" r="4.2" fill="#f2d24b"/><circle cx="181" cy="173" r="1.6" fill="#e0a82a"/><circle cx="189" cy="172" r="1.6" fill="#e0a82a"/><rect x="176" y="196" width="16" height="6" rx="2" fill="#6d4a2b"/></g>
-    </g>
+`;
+const sceneSVG = () => `
+    <g class="bgs dojo">${dojoBgInner()}</g>
     <g class="bgs office">
       <rect x="-600" y="-600" width="1500" height="832" fill="#cfd8e5"/>
       <rect x="-600" y="214" width="1500" height="18" fill="#a5b2c7"/>
@@ -1224,18 +1235,19 @@ function streetPick(s, stage) {
   if (funny) s.funnySeen = true;
   return pick;
 }
+const FUNNY_KEYS = new Set(OPP_FUNNY.map(x => x[0]));
 const streetRender = (key, mood) => { ST.g.innerHTML = STREET.charSVG(key, mood); };
 function streetClear() { ST.g.innerHTML = ''; ST.g.setAttribute('class', 'stopp'); FIG.classList.remove('sc-street', ...STREET_CLASSES); $('#s-game').classList.remove('th-street'); }
 function streetStep() {   // 新しいステージの相手。前の相手は、笑顔で去る
   const s = G.street, g = G, key = streetPick(s, G.round), prev = s.key;
-  s.key = key;
+  s.key = key; if (!FUNNY_KEYS.has(key)) s.lastNormal = key;
   if (!prev) { streetRender(key, 'wait'); ST.g.setAttribute('class', 'stopp enter'); return; }
   streetRender(prev, 'happy'); ST.g.setAttribute('class', 'stopp leave');
   setTimeout(() => { if (G !== g || !G.street || G.street.key !== key) return; streetRender(key, 'wait'); ST.g.setAttribute('class', 'stopp enter'); }, 780);
 }
 function streetMood(m) {   // 答え合わせ：ズレに応じて、相手の表情が変わる
   const s = G && G.street; if (!s || !s.key) return;
-  streetRender(s.key, m === 'delight' || m === 'happy' ? 'happy' : m === 'angry' || m === 'furious' ? 'angry' : 'wait');
+  s.mood = m === 'delight' || m === 'happy' ? 'happy' : m === 'angry' || m === 'furious' ? 'angry' : 'wait'; streetRender(s.key, s.mood);
   ST.g.setAttribute('class', 'stopp ' + ({ delight: 'jump', happy: 'hop', angry: 'fume', furious: 'rage' }[m] || ''));
 }
 const streetBg = scene => {   // 結果画面の背景：ゲーム中と同じ道の絵
@@ -1703,7 +1715,9 @@ function finishSolo(over) {
   }
   G.shareText = shareTextSolo(s, title, G.day);
   const lastL = G.log[G.log.length - 1] || {};
-  G.card = { title: MODE[G.mode].name + (G.mode === 'daily' ? '　' + G.day : ''), big: String(big), unit, rank: title, sub, angle: lastL.angle != null ? lastL.angle : 45, target: lastL.target != null ? lastL.target : null, grade: G.base === 'nomiss' ? { pre: '', label: title } : stampOfAvg(s.avg), mood: moodOf(s.avg), dojo: G.mode !== 'daily' };
+  G.card = { title: MODE[G.mode].name + (G.mode === 'daily' ? '　' + G.day : ''), big: String(big), unit, rank: title, sub, angle: lastL.angle != null ? lastL.angle : 45, target: lastL.target != null ? lastL.target : null, grade: G.base === 'nomiss' ? { pre: '', label: title } : stampOfAvg(s.avg), mood: moodOf(s.avg), dojo: G.mode !== 'daily',
+    label: { daily: '誤差の合計', score: '誤差の合計', survival: `HP ${s.param} で挑戦`, nomiss: `ズレ ${fmt(s.param)}° 以内で挑戦` }[G.mode] || '平均のズレ',
+    street: G.street ? { scene: G.street.scene, key: FUNNY_KEYS.has(G.street.key) ? (G.street.lastNormal || 'oji') : G.street.key, mood: G.street.mood || 'angry' } : null };   // 共有画像には、ツッコミ枠（動物・泥棒など）は出さず、直前の普通の人を出す
   $('#fi-again').textContent = 'もう一度'; $('#fi-again').hidden = false; $('#fi-again').onclick = () => startSolo(G.mode);
   const daily = G.mode === 'daily';
   $('#fi-again').hidden = daily && DAILY_ONCE;   // 本番謝罪を1日1回にしたときだけ、「もう一度」を隠す
@@ -1845,6 +1859,24 @@ function drawStamp(x, g, serif, R) {
   if (pre) { x.font = `700 ${fit(pre, R * .3)}px ${serif}`; x.fillText(pre, 0, -R * .26); x.font = `700 ${fit(lab, R * .55)}px ${serif}`; x.fillText(lab, 0, R * .21); }
   else { x.font = `700 ${fit(lab, R * .6)}px ${serif}`; x.fillText(lab, 0, R * .03); }
 }
+// 共有画像の下の「評価書」（紙）、ハンコ、フッター。どの背景にも共通
+function cardPanel(x, W, H, c, serif, sans) {
+  x.save(); x.shadowColor = 'rgba(20,30,55,.4)'; x.shadowBlur = 26; x.shadowOffsetY = 8;
+  x.fillStyle = '#fbfaf6'; rr(x, 64, 944, W - 128, 352, 14); x.fill(); x.restore();
+  x.fillStyle = '#1f3568'; x.fillRect(64, 944, W - 128, 10);
+  x.textAlign = 'center'; x.textBaseline = 'alphabetic';
+  x.fillStyle = '#5a6a86'; fitFont(x, c.label || '誤差の合計', W - 400, 30, 500, sans); x.fillText(c.label || '誤差の合計', W / 2, 1000);
+  cardBig(x, W / 2, 1158, c.big, c.unit, 190, serif, sans, '#1b2a4e', '#1b2a4e');
+  x.fillStyle = '#a3261f'; x.font = `700 58px ${serif}`; x.fillText(c.rank || '', W / 2, 1226);
+  x.fillStyle = '#5a6a86'; fitFont(x, c.sub || '', W - 190, 32, 500, sans); x.fillText(c.sub || '', W / 2, 1274);
+  x.save(); x.translate(918, 1052); x.rotate(-14 * Math.PI / 180);
+  x.strokeStyle = '#d62839'; x.fillStyle = '#d62839'; x.lineWidth = 7; x.beginPath(); x.arc(0, 0, 66, 0, 7); x.stroke();
+  x.lineWidth = 2.2; x.beginPath(); x.arc(0, 0, 57, 0, 7); x.stroke();
+  drawStamp(x, c.grade, serif, 66);
+  x.restore();
+  x.textBaseline = 'alphabetic'; x.fillStyle = 'rgba(246,241,231,.9)'; x.font = `500 28px ${sans}`; x.shadowColor = 'rgba(0,0,0,.45)'; x.shadowBlur = 6;
+  x.fillText('スマホを傾けて、誠意の角度を測ろう', W / 2, 1334); x.shadowBlur = 0;
+}
 function drawCardOffice(x, W, H, c, serif, sans) {
   x.fillStyle = '#cfd8e5'; x.fillRect(0, 0, W, 885);
   x.fillStyle = '#a5b2c7'; x.fillRect(0, 885, W, 18);
@@ -1870,21 +1902,55 @@ function drawCardOffice(x, W, H, c, serif, sans) {
   x.fillStyle = '#33405a'; x.font = `700 64px ${serif}`; x.fillText('誠意', 895, 452);
   cardFigure(x, 360, 735, 2, c.angle, null, false);   // お題の赤い影（ピンクの枠）は、画像には出さない
   cardCustomer(x, 800, 903, 2, c.mood, false);
-  // 評価書（紙）
-  x.save(); x.shadowColor = 'rgba(20,30,55,.4)'; x.shadowBlur = 26; x.shadowOffsetY = 8;
-  x.fillStyle = '#fbfaf6'; rr(x, 64, 944, W - 128, 352, 14); x.fill(); x.restore();
-  x.fillStyle = '#1f3568'; x.fillRect(64, 944, W - 128, 10);
-  x.fillStyle = '#5a6a86'; x.font = `500 30px ${sans}`; x.fillText('誤差の合計', W / 2, 1000);
-  cardBig(x, W / 2, 1158, c.big, c.unit, 190, serif, sans, '#1b2a4e', '#1b2a4e');
-  x.fillStyle = '#a3261f'; x.font = `700 58px ${serif}`; x.fillText(c.rank, W / 2, 1226);
-  x.fillStyle = '#5a6a86'; fitFont(x, c.sub, W - 190, 32, 500, sans); x.fillText(c.sub, W / 2, 1274);
-  // ハンコ
-  x.save(); x.translate(918, 1052); x.rotate(-14 * Math.PI / 180);
-  x.strokeStyle = '#d62839'; x.fillStyle = '#d62839'; x.lineWidth = 7; x.beginPath(); x.arc(0, 0, 66, 0, 7); x.stroke();
-  x.lineWidth = 2.2; x.beginPath(); x.arc(0, 0, 57, 0, 7); x.stroke();
-  drawStamp(x, c.grade, serif, 66);
-  x.restore();
-  x.textBaseline = 'alphabetic'; x.fillStyle = 'rgba(246,241,231,.88)'; x.font = `500 28px ${sans}`; x.fillText('スマホを傾けて、誠意の角度を測ろう', W / 2, 1334);
+  cardPanel(x, W, H, c, serif, sans);
+}
+// 道のときの主人公：私服（パーカー、ジーンズ、スニーカー、足元にオレンジのリュック）
+function cardFigureCasual(x, hx, hy, s, angle) {
+  x.save(); x.translate(hx, hy); x.scale(s, s);
+  x.strokeStyle = 'rgba(30,40,60,.3)'; x.lineWidth = 2; x.beginPath(); x.moveTo(-140, 84); x.lineTo(330, 84); x.stroke();
+  x.strokeStyle = '#c96a1f'; x.lineWidth = 3; x.beginPath(); x.moveTo(-49, 59); x.lineTo(-49, 51); x.lineTo(-31, 51); x.lineTo(-31, 59); x.stroke();
+  x.fillStyle = '#e9833a'; rr(x, -58, 58, 36, 25, 6); x.fill(); x.fillStyle = '#f2c94c'; rr(x, -44, 66, 8, 5, 1); x.fill();
+  x.fillStyle = '#3a4f78'; rr(x, -11, 0, 22, 76, 9); x.fill();
+  x.fillStyle = '#f4f4f4'; x.strokeStyle = '#b8b8c0'; x.lineWidth = 1.4; rr(x, -15, 74, 44, 10, 5); x.fill(); x.stroke();
+  x.save(); x.rotate(angle * Math.PI / 180);
+  x.fillStyle = '#4f86c6'; rr(x, -17, -70, 34, 74, 15); x.fill();
+  x.fillStyle = '#3f73b0'; rr(x, -8, -60, 15, 56, 7); x.fill();
+  x.fillStyle = '#6fa3dc'; x.beginPath(); x.moveTo(3, -74); x.lineTo(17, -69); x.lineTo(13, -57); x.lineTo(6, -67); x.closePath(); x.fill();
+  x.strokeStyle = '#f6f1e7'; x.lineWidth = 1.6; x.beginPath(); x.moveTo(11, -64); x.lineTo(12, -46); x.moveTo(14, -64); x.lineTo(15, -46); x.stroke();
+  x.fillStyle = '#f1c9a5'; x.beginPath(); x.arc(0, -90, 19, 0, 7); x.fill();
+  x.fillStyle = '#e2b48c'; x.beginPath(); x.ellipse(-7, -87, 3.2, 4.4, 0, 0, 7); x.fill();
+  x.fillStyle = '#2b2433'; x.beginPath(); x.arc(0, -90, 19, Math.PI * 1.05, Math.PI * 1.95); x.closePath(); x.fill();
+  x.fillStyle = '#1a1a2a'; x.beginPath(); x.arc(10, -87, 2, 0, 7); x.fill();
+  x.restore(); x.restore();
+}
+// 道・道場の共有画像：ゲーム中と同じ背景の絵（SVG）を敷く。道は、最後の相手も立つ。下は、共通の評価書
+async function drawCardScene(c) {
+  const W = 1080, H = 1350, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const x = cv.getContext('2d');
+  const serif = '"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif', sans = '"Hiragino Sans","Yu Gothic UI","Noto Sans JP",sans-serif';
+  const street = !!c.street;
+  const bg = street ? STREET.SCENES[{ 'sc-shop': 'shopping', 'sc-res': 'residential', 'sc-river': 'river' }[c.street.scene] || 'shopping']() : dojoBgInner();
+  const opp = street && c.street.key ? `<g transform="translate(280 232)">${STREET.charSVG(c.street.key, c.street.mood || 'wait')}</g>` : '';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-120 -219.5 540 675" width="${W}" height="${H}">${STREET.DEFS}${bg}${opp}</svg>`;
+  const img = await new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
+  if (!img) throw new Error('bg');
+  x.drawImage(img, 0, 0, W, H);
+  // 看板（題）：道場は木の看板、道は紺の看板
+  x.save(); x.shadowColor = 'rgba(0,0,0,.3)'; x.shadowBlur = 16; x.shadowOffsetY = 8;
+  x.fillStyle = street ? '#1f3568' : '#6e4426'; rr(x, 250, 50, 580, 176, 16); x.fill(); x.restore();
+  x.strokeStyle = street ? '#e9b44c' : '#b9803f'; x.lineWidth = 5; rr(x, 258, 58, 564, 160, 12); x.stroke();
+  x.textAlign = 'center'; x.textBaseline = 'alphabetic';
+  x.fillStyle = '#f6f1e7'; x.font = `700 112px ${serif}`; x.fillText('謝罪道場', W / 2, 172);
+  x.fillStyle = 'rgba(246,241,231,.96)'; rr(x, 190, 246, 700, 64, 32); x.fill();
+  x.fillStyle = '#a3261f'; fitFont(x, c.title, 640, 38, 700, sans); x.fillText(c.title, W / 2, 291);
+  if (street) cardFigureCasual(x, 360, 735, 2, c.angle); else { cardFigure(x, 360, 735, 2, c.angle, null, true); cardCustomer(x, 800, 903, 2, c.mood, true); }
+  cardPanel(x, W, H, c, serif, sans);
+  return cv;
+}
+// シェア画像を作る：本番謝罪は会社風、道（サバイバル／ノーミス）と道場（ほか）は背景の絵。読み込みに失敗したら、従来の絵
+async function renderCard(c) {
+  if (!c.dojo && !c.street) return drawCard(c);
+  try { return await drawCardScene(c); } catch (e) { return drawCard(c); }
 }
 function drawCard(c) {
   const W = 1080, H = 1350, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
@@ -1913,7 +1979,7 @@ function drawCard(c) {
   x.fillStyle = 'rgba(246,241,231,.55)'; x.font = `500 28px ${sans}`; x.fillText('スマホを傾けて、誠意の角度を測ろう', W / 2, 1316);
   return cv;
 }
-const cardBlob = c => new Promise((res, rej) => { try { drawCard(c).toBlob(b => b ? res(b) : rej(new Error('blob')), 'image/png'); } catch (e) { rej(e); } });
+const cardBlob = async c => { const cv = await renderCard(c); return new Promise((res, rej) => { try { cv.toBlob(b => b ? res(b) : rej(new Error('blob')), 'image/png'); } catch (e) { rej(e); } }); };
 function openCard(blob, text) {
   const u = URL.createObjectURL(blob);
   $('#card-img').src = u; $('#card-dl').href = u;
@@ -2261,7 +2327,7 @@ function onlineEnd(m) {
   if (G) {
     const tot = (rk[mine - 1] || {}).total || 0, avg = G.rounds ? tot / G.rounds : tot;
     G.shareText = `【謝罪道場】オンライン対戦 ${rk.length}人中${mine}位！（誤差の合計 ${fmt(tot)}°）`;
-    G.card = { title: 'オンライン対戦', big: String(mine), unit: `位 / ${rk.length}人`, rank: mine === 1 ? '優勝' : '次は勝つ', sub: `誤差の合計 ${fmt(tot)}°（${G.rounds}回勝負）`, angle: G.lastAngle != null ? G.lastAngle : 45, target: G.lastTarget != null ? G.lastTarget : null, grade: stampOfAvg(avg), mood: moodOf(avg), dojo: true };
+    G.card = { title: 'オンライン対戦', big: String(mine), unit: `位 / ${rk.length}人`, rank: mine === 1 ? '優勝' : '次は勝つ', sub: `誤差の合計 ${fmt(tot)}°（${G.rounds}回勝負）`, angle: G.lastAngle != null ? G.lastAngle : 45, target: G.lastTarget != null ? G.lastTarget : null, grade: stampOfAvg(avg), mood: moodOf(avg), dojo: true, label: '順位' };
   }
   $('#fi-again').textContent = '部屋に戻る'; $('#fi-again').hidden = false;
   $('#fi-again').onclick = () => { R = null; sheet(null); renderLobby(); show('s-lobby'); };
@@ -2676,7 +2742,7 @@ function rmShowEnd(res, out, why) {
     ${lines}`;
   const avg = myE != null ? myE : 10;
   G.shareText = RM.bot ? `【謝罪道場】ランクマッチの練習で${label}` : `【謝罪道場】ランクマッチ（${KINDS[RM.kind]}）で${label}${out && !out.already ? ` レート${out.rating}（${tierOf(out.rating)}）` : ''}`;
-  G.card = { title: 'ランクマッチ（' + KINDS[RM.kind] + '）', big: label, unit: '', rank: out && !out.already ? tierOf(out.rating) : '', sub: out && !out.already ? `レート ${out.rating}（${out.delta > 0 ? '+' : ''}${out.delta}）` : '', angle: G.lastAngle != null ? G.lastAngle : 45, target: G.lastTarget != null ? G.lastTarget : null, grade: stampOfAvg(avg), mood: moodOf(avg), dojo: true };
+  G.card = { title: 'ランクマッチ（' + KINDS[RM.kind] + '）', big: label, unit: '', rank: out && !out.already ? tierOf(out.rating) : '', sub: out && !out.already ? `レート ${out.rating}（${out.delta > 0 ? '+' : ''}${out.delta}）` : '', angle: G.lastAngle != null ? G.lastAngle : 45, target: G.lastTarget != null ? G.lastTarget : null, grade: stampOfAvg(avg), mood: moodOf(avg), dojo: true, label: '結果' };
   $('#fi-rank').hidden = true; $('#fi-rankopen').hidden = true;
   $('#fi-again').textContent = 'もう一度対戦'; $('#fi-again').hidden = false; $('#fi-again').onclick = () => { show('s-ranked'); rmRenderMe(); rmFind(); };
   $('#fi-menu').textContent = 'ランクマッチへ'; $('#fi-menu').onclick = () => rmOpenHub(true);
