@@ -634,12 +634,12 @@ const DAILY_ONCE = true;
 const MODES = [
   { key: 'daily', name: '1日1回限り　本番謝罪', desc: '今日は全員が同じ5問。誤差の合計で、順位がつきます。' },
   { key: 'practice', name: '練習', desc: 'ゆっくり練習。このモードは終わりがありません。' },
-  { key: 'survival', name: 'サバイバル', desc: 'HPは30。ズレたぶんだけ減っていき、0になったらアウト。何ステージ突破できる？', fixed: true },
-  { key: 'nomiss', name: 'ノーミス', desc: 'ズレが5°を超えたらアウト。1回成功するごとに、称号が上がっていく。何連続で決められる？', fixed: true },
+  { key: 'survival', name: 'サバイバル', desc: 'HPは50。ズレたぶんだけ減っていき、0になったらアウト。何ステージ突破できる？', fixed: true },
+  { key: 'nomiss', name: 'ノーミス', desc: 'ズレが10°を超えたらアウト。1回成功するごとに、称号が上がっていく。何連続で決められる？', fixed: true },
   { key: 'score', name: 'スコアアタック', desc: '5回の誤差の合計で勝負。少ないほど立派。', fixed: true },
 ];
 const MODE = Object.fromEntries(MODES.map(m => [m.key, m]));
-const FIXED = { survival: 30, nomiss: 5, score: 5 };   // ルールは固定（サバイバルのHP、ノーミスの許容誤差、スコアアタックの回数）
+const FIXED = { survival: 50, nomiss: 10, score: 5 };   // ルールは固定（サバイバルのHP、ノーミスの許容誤差、スコアアタックの回数）
 
 /* ---------- 広告 ----------
    Google AdSense の「ca-pub-…」と広告ユニットの slot ID を入れると、メニューと結果画面にだけ広告が出ます。
