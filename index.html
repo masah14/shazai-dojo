@@ -1315,7 +1315,7 @@ $('#g-quit').onclick = () => {
 /* ---------- 今日の謝罪ランキング ----------
    全員共通のランキングは、Firebase Realtime Database のURLを入れると有効になります（手順は「ランキング設定.md」）。
    空のままなら、この端末の記録だけが表示されます。 */
-const RANK = { url: '' };
+const RANK = { url: 'https://shazai-dojo-default-rtdb.asia-southeast1.firebasedatabase.app' };
 const rankOn = () => !!RANK.url;
 function myUid() {
   if (!S.uid) { S.uid = Array.from(crypto.getRandomValues(new Uint8Array(10)), b => b.toString(16).padStart(2, '0')).join(''); save(); }
