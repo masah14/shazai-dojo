@@ -310,7 +310,6 @@ svg .vsp text{fill:#1b2236;font:700 9.5px var(--sans);text-anchor:middle}
 #s-final.office .fi-rank,#s-final.street .fi-rank{background:#fff;color:#1b2236;box-shadow:0 2px 8px rgba(20,30,55,.2)}
 #s-final.street{--dim:#5a6a86;--line:rgba(27,34,54,.22);color:#1b2236;background-color:#6e737d;background-size:cover;background-position:center top;background-repeat:no-repeat}
 #s-final.street .btn.ghost{background:rgba(27,34,54,.8);color:#f6f1e7;border:0}
-.doc-trail{padding:0 16px 10px;text-align:center;font-size:12.5px;color:#5a6a86}
 #s-final.office .fi-rank b{color:#a3261f}
 #s-final.office .btn.ghost{color:#f6f1e7;border-color:rgba(246,241,231,.6)}
 .doc{background:#fbfaf6;color:#1b2236;border-radius:6px;box-shadow:0 8px 22px rgba(20,30,55,.3);overflow:hidden}
@@ -1405,7 +1404,6 @@ const scene = t => t < 0 ? 'もはや謝罪ではない' : t <= 12 ? '軽く会�
 // ノーミスの称号：成功した回数で決まる。[この回数から, 称号]
 const NOMISS_TITLES = [[0, '論外'], [1, '謝罪の凡才'], [4, '謝罪の秀才'], [6, '謝罪の逸材'], [8, '謝罪の天才'], [10, '謝罪の神様']];
 const titleNomiss = n => NOMISS_TITLES.filter(x => n >= x[0]).pop()[1];
-const trailOf = n => { const t = NOMISS_TITLES.filter(x => n >= x[0]).map(x => esc(x[1])); return (t.length > 4 ? '… → ' : '') + t.slice(-4).join(' → '); };   // 上がってきた称号（最後の4つ）
 const titleN = n => n >= 20 ? '謝罪会見の達人' : n >= 15 ? '部長クラス' : n >= 10 ? '中堅社員' : n >= 6 ? '新入社員' : n >= 3 ? '要研修' : '出禁';
 // 称号とハンコ：誤差の合計（5問の合計。問の数がちがうときは、平均×5）で決める。[上限, 前につく言葉, 称号]
 const TITLES = [[5, '謝罪の', '神様'], [10, '謝罪の', '天才'], [20, '謝罪の', '逸材'], [30, '謝罪の', '秀才'], [50, '謝罪の', '凡才'], [70, '', '半人前'], [90, '', '能無し'], [120, '', '論外'], [Infinity, '', '出禁']];
@@ -1779,13 +1777,11 @@ function finishSolo(over) {
   if (streetRes) {   // サバイバル／ノーミス：道の背景に、評価書
     const lab = title.length > 4 ? [title.slice(0, Math.ceil(title.length / 2)), title.slice(Math.ceil(title.length / 2))] : ['', title];
     const rows = G.log.map((l, i) => `<tr><td>${i + 1}. ${sgSlot(l.target)}°</td><td class="n a"><span>${sgf(l.angle)}°</span></td><td class="n d"><span>${l.err.toFixed(1)}°</span></td><td>${miniStamp(l.err)}</td></tr>`).join('');
-    const trailTxt = G.base === 'nomiss' && s.cleared > 0 ? `昇進：${trailOf(s.cleared)}` : '';
     $('#fi-body').innerHTML = `<div class="doc">
       <div class="doc-head"><b>謝罪道場</b><span>${esc(MODE[G.mode].name)}</span></div>
       <div class="doc-meta"><span>${G.base === 'nomiss' ? `ズレ ${fmt(s.param)}° 以内を、何連続で決められる？` : `HP ${s.param}。何ステージ突破できる？`}</span><span>${esc(S.name)} 様</span></div>
       <div class="doc-score"><small>${G.base === 'nomiss' ? '連続成功' : '突破ステージ'}</small><div class="fi-big">${big}<small>${G.base === 'nomiss' ? '連続' : 'ステージ'}</small></div><div class="doc-stamp">${lab[0] ? `<small>${esc(lab[0])}</small>` : ''}<span>${esc(lab[1])}</span></div></div>
       <div class="doc-line">${G.base === 'nomiss' ? '最終称号' : '称号'}<b>${esc(title)}</b>${isNew ? '<small style="color:#a3261f;font-weight:700">NEW RECORD</small>' : `<small>${esc(sub)}</small>`}</div>
-      ${trailTxt ? `<div class="doc-trail">${trailTxt}</div>` : ''}
       <table class="doc-tbl"><thead><tr><th>お題の角度</th><th class="n">あなたの角度</th><th class="n">ズレ</th><th>判定</th></tr></thead><tbody>${rows || '<tr><td colspan="4">記録なし</td></tr>'}</tbody></table>
     </div>`;
   } else if (office) {   // 本番謝罪：会社の「評価書」
@@ -1801,7 +1797,6 @@ function finishSolo(over) {
   $('#fi-body').innerHTML = `<div class="fi-title">${esc(MODE[G.mode].name)}</div>
     ${bigHTML}
     <div class="fi-title" style="color:var(--gold)">${esc(title)}</div>
-    ${G.base === 'nomiss' && s.cleared > 0 ? `<div class="fi-sub">昇進：${trailOf(s.cleared)}</div>` : ''}
     ${isNew ? '<div class="fi-new">NEW RECORD</div>' : ''}
     <div class="fi-sub">${esc(sub)}</div>
     <div class="log">${logs ? `<div class="lh"><span>お題の角度</span><span>あなたの角度（ズレ）</span></div>${logs}` : '<div>記録なし</div>'}</div>`;
