@@ -790,7 +790,7 @@ const tatamiPath = () => {   // 畳の縁（濃い緑）。奥行きがあるよ
   return d;
 };
 const carpetPath = () => { let d = ''; for (let x = -600; x < 900; x += 40) d += `M${x} 232V700`; for (let y = 232; y < 700; y += 26) d += `M-600 ${y}H900`; return d; };
-/* STREET:BEGIN  道（路上）の背景と、謝罪相手のキャラの絵。足元が (0,0)。元は tools/street_lib.js（直したら、tools/port_street を回して入れ直す） */
+/* STREET:BEGIN  道（路上）の背景と、謝罪相手のキャラの絵。足元が (0,0)。元は tools/street_lib.js（直したら、tools/port_street.py を回して入れ直す） */
 const STREET = (() => {
 const SK = '#f1c9a5', SK2 = '#e2b48c', INK = '#2a2020';
 const C = (cx, cy, r, f, x = '') => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${f}" ${x}/>`;
@@ -802,13 +802,23 @@ const eyes = (cy, r, f = INK) => C(-r * .38, cy + r * .08, 2.3 * r / 21, f) + C(
 const mouth = (cy, r, mood = 'wait') => {
   const my = cy + r * .55;
   if (mood === 'happy') return SS(`M${-r * .3} ${my - 2} Q0 ${my + 7} ${r * .3} ${my - 2}`, INK, 2.2);
-  if (mood === 'angry') return SS(`M${-r * .28} ${my + 2} Q0 ${my - 5} ${r * .28} ${my + 2}`, INK, 2.2);
   if (mood === 'open') return PP(`M${-r * .28} ${my - 3} Q0 ${my + 9} ${r * .28} ${my - 3}Z`, '#6b1f24');
   return SS(`M${-r * .22} ${my} H${r * .22}`, INK, 2.2);
 };
 const glasses = (R, hy, col, w = 1.8) => `<circle cx="${-R * .38}" cy="${hy + R * .08}" r="${R * .32}" fill="none" stroke="${col}" stroke-width="${w}"/><circle cx="${R * .38}" cy="${hy + R * .08}" r="${R * .32}" fill="none" stroke="${col}" stroke-width="${w}"/>` + SS(`M${-R * .06} ${hy + R * .08} H${R * .06}`, col, w);
 const blush = (cy, r) => C(-r * .72, cy + r * .38, 4, '#f08a8a', 'opacity=".5"') + C(r * .72, cy + r * .38, 4, '#f08a8a', 'opacity=".5"');
 const shadow = w => E(0, 0, w, 4.5, 'rgba(0,0,0,.18)');
+
+const faceM = (hy, R, mo, bl) => {
+  const ex = R * .38, ey = hy + R * .08, my = hy + R * .55;
+  let f = mo === 'angry' ? C(0, hy, R, 'rgba(224,70,60,.3)') : '';
+  f += mo === 'happy' ? SS(`M${-ex - 4} ${ey + 2} q4 -7 8 0 M${ex - 4} ${ey + 2} q4 -7 8 0`, INK, 2.4) : eyes(hy, R);
+  if (bl || mo === 'happy') f += blush(hy, R);
+  if (mo === 'happy') f += PP(`M${-R * .3} ${my - 3} Q0 ${my + 9} ${R * .3} ${my - 3}Z`, '#6b1f24') + PP(`M${-R * .2} ${my - 2} Q0 ${my + 2} ${R * .2} ${my - 2}Z`, '#fff');
+  else if (mo === 'angry') f += SS(`M${-R * .3} ${my + 3} Q0 ${my - 5} ${R * .3} ${my + 3}`, INK, 2.4) + SS(`M${-R * .7} ${hy - R * .38} L${-R * .1} ${hy - R * .08} M${R * .7} ${hy - R * .38} L${R * .1} ${hy - R * .08}`, '#3b3b44', 3.2) + SS(`M${R * .85} ${hy - R * .95} l5 -4 M${R * .95} ${hy - R * .65} l7 -1`, '#d62839', 2.6);
+  else f += SS(`M${-R * .22} ${my} H${R * .22}`, INK, 2.2);
+  return f;
+};
 
 /* 人：足元(0,0)。o: legH, bodyH, bodyW, head, skin */
 function human(o) {
@@ -828,9 +838,7 @@ function human(o) {
   if (o.behindHead) s += o.behindHead({ R, hy });
   s += E(-R, hy + 2, 3, 5, SK2) + E(R, hy + 2, 3, 5, SK2) + C(0, hy, R, sk);
   if (o.hair) s += o.hair({ R, hy });
-  const mo = o.mood ?? 'wait';
-  s += (mo === 'angry' ? C(0, hy, R, 'rgba(224,70,60,.28)') : '') + eyes(hy, R) + (o.blush || mo === 'happy' ? blush(hy, R) : '') + mouth(hy, R, mo);
-  if (mo === 'angry') s += SS(`M${-R * .7} ${hy - R * .36} L${-R * .12} ${hy - R * .1} M${R * .7} ${hy - R * .36} L${R * .12} ${hy - R * .1}`, '#3b3b44', 2.8) + SS(`M${R * .9} ${hy - R * .9} l5 -4 M${R * .95} ${hy - R * .6} l7 -1`, '#d62839', 2.4);
+  s += faceM(hy, R, o.mood ?? 'wait', o.blush);
   if (o.front) s += o.front({ L, B, W, R, bt, hy });
   return s;
 }
@@ -861,24 +869,46 @@ const CHARS = {
     skirt: ({ L }) => PP(`M-24 ${-L - 4} L24 ${-L - 4} L30 -36 L-30 -36Z`, '#2f3a5a') + RC(-11, -40, 9, 30, 4, '#f1c9a5') + RC(2, -40, 9, 30, 4, '#f1c9a5') + RC(-15, -14, 14, 14, 4, '#5a3a2e') + RC(1, -14, 14, 14, 4, '#5a3a2e'),
     hair: ({ R, hy }) => hairShort('#6b4a3a', 2)({ R, hy }) + PP(`M${-R} ${hy - 6} Q0 ${hy - 2} ${R * .3} ${hy - R + 2} Q${-R * .4} ${hy - R + 2} ${-R} ${hy - 6}Z`, '#6b4a3a'),
     front: ({ bt, W, B }) => SS(`M${-W / 2 + 4} ${bt + 2} L${W / 2 - 4} ${bt + B * .85}`, '#c9a227', 2.4) + RC(W / 2 - 6, bt + B * .85 - 6, 18, 16, 4, '#c9a227') }),
-  boy: (m = 'wait') => human({ mood: m, legH: 38, bodyH: 46, bodyW: 38, head: 24, pants: '#3a6aa8', top: '#f2c94c', shoes: '#f4f4f4', blush: true,
+  boy: (m = 'wait') => human({ mood: m, legH: 38, bodyH: 46, bodyW: 38, head: 20, pants: '#3a6aa8', top: '#f2c94c', shoes: '#f4f4f4', blush: true,
     behind: ({ bt, W }) => RC(-W / 2 - 5, bt + 4, W + 10, 36, 7, '#3f8f5a'),
     hair: ({ R, hy }) => PP(`M${-R - 1} ${hy + 1} A${R + 1} ${R + 1} 0 0 1 ${R + 1} ${hy + 1} Q0 ${hy - 6} ${-R - 1} ${hy + 1}Z`, '#d62839') + RC(-R - 8, hy - 4, R + 10, 5, 2.5, '#b01f2d') }),
-  girl: (m = 'wait') => human({ mood: m, legH: 38, bodyH: 46, bodyW: 38, head: 24, pants: '#f6f1e7', top: '#e04a6a', shoes: '#c92a4a', blush: true,
+  girl: (m = 'wait') => human({ mood: m, legH: 38, bodyH: 46, bodyW: 38, head: 20, pants: '#f6f1e7', top: '#e04a6a', shoes: '#c92a4a', blush: true,
     skirt: ({ L }) => PP(`M-19 ${-L} L19 ${-L} L27 -22 L-27 -22Z`, '#e04a6a') + RC(-9, -24, 7, 16, 3, '#f6f1e7') + RC(2, -24, 7, 16, 3, '#f6f1e7') + RC(-14, -9, 13, 9, 4, '#c92a4a') + RC(1, -9, 13, 9, 4, '#c92a4a'),
     behindHead: ({ R, hy }) => C(-R - 5, hy + 8, 7, '#2b2433') + C(R + 5, hy + 8, 7, '#2b2433'),
     hair: ({ R, hy }) => hairShort('#2b2433', 4)({ R, hy }) + C(-R + 3, hy - R + 5, 4.4, '#f2c94c') + C(R - 3, hy - R + 5, 4.4, '#f2c94c') }),
 
   /* ---- ツッコミ枠（4人目から）---- */
-  dog: () => shadow(34) + SS('M30 -40 Q46 -46 42 -64', '#c98a45', 7) + RC(-24, -26, 8, 26, 4, '#c98a45') + RC(-10, -26, 8, 26, 4, '#c98a45') + RC(14, -26, 8, 26, 4, '#c98a45') + RC(26, -26, 8, 26, 4, '#c98a45')
-    + E(2, -38, 34, 21, '#d9a35f') + E(-4, -30, 22, 11, '#f6efe0') + PP('M-44 -62 L-36 -84 L-26 -66Z', '#b07a3a') + PP('M-24 -64 L-12 -84 L-8 -62Z', '#b07a3a')
-    + C(-34, -56, 19, '#d9a35f') + E(-48, -50, 11, 8, '#f6efe0') + E(-56, -54, 3.6, 2.8, '#2a2020') + C(-38, -60, 2.6, '#2a2020') + SS('M-46 -45 q6 4 12 0', '#2a2020', 1.6) + PP('M-44 -44 q3 12 7 0Z', '#ef7f8f'),
-  cat: () => shadow(24) + SS('M16 -8 Q44 -10 40 -44 Q38 -56 30 -52', '#8a8f9a', 7) + E(0, -28, 21, 28, '#a3a9b5') + E(0, -22, 12, 18, '#e9ecf1')
-    + RC(-20, -8, 12, 8, 4, '#a3a9b5') + RC(8, -8, 12, 8, 4, '#a3a9b5') + PP('M-20 -64 L-18 -90 L-5 -74Z', '#a3a9b5') + PP('M20 -64 L18 -90 L5 -74Z', '#a3a9b5') + C(0, -62, 19, '#a3a9b5')
-    + SS('M-8 -90 v6 M0 -92 v8 M8 -90 v6', '#7d828d', 2.4, 'transform="translate(0 6)"') + SS('M-13 -62 h8 M5 -62 h8', '#2a2020', 2.4) + PP('M-2 -55 h4 l-2 3Z', '#ef7f8f') + SS('M-24 -54 l-12 -2 M-24 -50 l-12 2 M24 -54 l12 -2 M24 -50 l12 2', '#444', 1),
-  baby: () => shadow(26) + E(0, -20, 24, 18, '#f6f1e7') + RC(-18, -40, 36, 26, 12, '#f8d96a') + RC(-30, -36, 12, 22, 6, '#f8d96a') + RC(18, -36, 12, 22, 6, '#f8d96a')
-    + C(-24, -17, 6, SK) + C(24, -17, 6, SK) + E(-10, -4, 8, 5, SK) + E(10, -4, 8, 5, SK) + C(0, -58, 23, SK) + SS('M-4 -80 q4 -9 8 0', '#6b4a3a', 2.6)
-    + eyes(-58, 23) + blush(-58, 23) + C(0, -45, 5, '#f08ab0') + SS('M-5 -45 h10', '#d46a92', 1.5) + E(-25, -60, 3, 5, SK2) + E(25, -60, 3, 5, SK2),
+  dog: (m = 'wait') => {
+    const eye = m === 'happy' ? SS('M-43 -59 q4 -6 8 0', INK, 2.4) + C(-30, -52, 3.6, '#f08a8a', 'opacity=".55"') : m === 'angry' ? C(-38, -59, 2.4, INK) + SS('M-46 -69 L-31 -62', INK, 3.2) : C(-38, -60, 2.6, INK);
+    const mo = m === 'angry' ? SS('M-48 -45 q6 -4 12 0', INK, 1.8) + PP('M-47 -45 l2.6 5.5 l2.6 -5.5Z', '#fff') + PP('M-41 -45 l2.6 5.5 l2.6 -5.5Z', '#fff')
+      : m === 'happy' ? SS('M-47 -46 q6 6 12 0', INK, 1.8) + PP('M-45 -45 q4 16 9 0Z', '#ef7f8f')
+      : SS('M-46 -45 q6 4 12 0', INK, 1.6) + PP('M-44 -44 q3 12 7 0Z', '#ef7f8f');
+    const tail = m === 'happy' ? SS('M30 -40 Q54 -38 50 -74', '#c98a45', 7) : m === 'angry' ? SS('M30 -42 Q40 -42 38 -56', '#c98a45', 8) : SS('M30 -40 Q46 -46 42 -64', '#c98a45', 7);
+    return shadow(34) + tail + RC(-24, -26, 8, 26, 4, '#c98a45') + RC(-10, -26, 8, 26, 4, '#c98a45') + RC(14, -26, 8, 26, 4, '#c98a45') + RC(26, -26, 8, 26, 4, '#c98a45')
+      + E(2, -38, 34, 21, '#d9a35f') + E(-4, -30, 22, 11, '#f6efe0') + PP('M-44 -62 L-36 -84 L-26 -66Z', '#b07a3a') + PP('M-24 -64 L-12 -84 L-8 -62Z', '#b07a3a')
+      + C(-34, -56, 19, '#d9a35f') + (m === 'angry' ? C(-34, -56, 19, 'rgba(224,70,60,.28)') : '') + E(-48, -50, 11, 8, '#f6efe0') + E(-56, -54, 3.6, 2.8, INK) + eye + mo
+      + (m === 'angry' ? SS('M-18 -80 l6 -6 M-14 -74 l9 -2', '#d62839', 2.6) : '');
+  },
+  cat: (m = 'wait') => {
+    const eyes2 = m === 'happy' ? SS('M-14 -60 q4.5 -7 9 0 M5 -60 q4.5 -7 9 0', INK, 2.6) + C(-14, -54, 3.4, '#f08a8a', 'opacity=".55"') + C(14, -54, 3.4, '#f08a8a', 'opacity=".55"')
+      : m === 'angry' ? E(-9, -62, 5, 5, '#ffd84a') + E(9, -62, 5, 5, '#ffd84a') + E(-9, -62, 1.3, 4.4, INK) + E(9, -62, 1.3, 4.4, INK) + SS('M-16 -72 L-4 -65 M16 -72 L4 -65', INK, 3.2)
+      : SS('M-13 -62 h8 M5 -62 h8', INK, 2.4);
+    const mo = m === 'happy' ? SS('M-5 -50 q2.5 4 5 0 q2.5 4 5 0', INK, 1.6) : m === 'angry' ? PP('M-5 -50 Q0 -43 5 -50Z', '#6b1f24') + PP('M-4 -50 l1.6 4 l1.6 -4Z', '#fff') + PP('M2.4 -50 l1.6 4 l1.6 -4Z', '#fff') : '';
+    const tail = m === 'angry' ? SS('M16 -8 Q42 -22 36 -66', '#8a8f9a', 9) : m === 'happy' ? SS('M16 -8 Q46 -10 44 -50 Q43 -64 34 -62', '#8a8f9a', 7) : SS('M16 -8 Q44 -10 40 -44 Q38 -56 30 -52', '#8a8f9a', 7);
+    return shadow(24) + tail + E(0, -28, 21, 28, '#a3a9b5') + E(0, -22, 12, 18, '#e9ecf1')
+      + RC(-20, -8, 12, 8, 4, '#a3a9b5') + RC(8, -8, 12, 8, 4, '#a3a9b5') + PP('M-20 -64 L-18 -90 L-5 -74Z', '#a3a9b5') + PP('M20 -64 L18 -90 L5 -74Z', '#a3a9b5') + C(0, -62, 19, '#a3a9b5')
+      + (m === 'angry' ? C(0, -62, 19, 'rgba(224,70,60,.25)') : '')
+      + SS('M-8 -90 v6 M0 -92 v8 M8 -90 v6', '#7d828d', 2.4, 'transform="translate(0 6)"') + eyes2 + PP('M-2 -55 h4 l-2 3Z', '#ef7f8f') + mo
+      + SS('M-24 -54 l-12 -2 M-24 -50 l-12 2 M24 -54 l12 -2 M24 -50 l12 2', '#444', 1);
+  },
+  baby: (m = 'wait') => {
+    const face = m === 'happy' ? SS('M-14 -60 q4.5 -7 9 0 M5 -60 q4.5 -7 9 0', INK, 2.6) + blush(-58, 23) + PP('M-7 -49 Q0 -37 7 -49Z', '#6b1f24') + PP('M-5 -49 Q0 -45 5 -49Z', '#fff')
+      : m === 'angry' ? SS('M-15 -63 l8 3.5 l-8 3.5 M15 -63 l-8 3.5 l8 3.5', INK, 2.6) + C(-14, -54, 5, 'rgba(224,70,60,.3)') + C(14, -54, 5, 'rgba(224,70,60,.3)') + E(-16, -50, 2.6, 4.4, '#8fd0ff') + E(16, -50, 2.6, 4.4, '#8fd0ff') + PP('M-8 -46 Q0 -31 8 -46Z', '#6b1f24')
+      : eyes(-58, 23) + blush(-58, 23) + C(0, -45, 5, '#f08ab0') + SS('M-5 -45 h10', '#d46a92', 1.5);
+    return shadow(26) + E(0, -20, 24, 18, '#f6f1e7') + RC(-18, -40, 36, 26, 12, '#f8d96a') + RC(-30, -36, 12, 22, 6, '#f8d96a') + RC(18, -36, 12, 22, 6, '#f8d96a')
+      + C(-24, -17, 6, SK) + C(24, -17, 6, SK) + E(-10, -4, 8, 5, SK) + E(10, -4, 8, 5, SK) + E(-25, -60, 3, 5, SK2) + E(25, -60, 3, 5, SK2) + C(0, -58, 23, SK) + SS('M-4 -80 q4 -9 8 0', '#6b4a3a', 2.6)
+      + face;
+  },
   /* 泥棒：唐草模様の頬かむりと、大きな唐草のふろしき（古い漫画の泥棒） */
   thief: (m = 'wait') => {
     const SW = '#9aa876', PANTS = '#7a5a3c', K = 'url(#kara)';
@@ -905,17 +935,25 @@ const CHARS = {
   ninja: (m = 'wait') => human({ mood: m, pants: '#23232b', top: '#2f2f3a', shoes: '#23232b', sleeve: '#2f2f3a', skin: '#2f2f3a',
     topDeco: ({ bt, W, B }) => RC(-W / 2, bt + B * .55, W, 7, 0, '#d62839') + PP(`M${W / 2 - 2} ${bt + B * .55 + 2} l16 8 l-6 10Z`, '#d62839'),
     behind: ({ bt, W, hy }) => SS(`M${-W / 2 - 6} ${bt + 6} L${W / 2 + 14} ${hy - 22}`, '#8a8f9a', 3.5) + SS(`M${-W / 2 - 6} ${bt + 6} l-5 5`, '#5a3a2a', 4),
-    hair: ({ R, hy }) => RC(-R, hy - 3, 2 * R, 11, 5, SK2) + RC(-R, hy - 3, 2 * R, 11, 5, 'none', 'stroke="#2f2f3a" stroke-width="0"'),
-    front: ({ R, hy }) => E(-R * .4, hy + 2, 3.2, 2.2, '#fff') + E(R * .4, hy + 2, 3.2, 2.2, '#fff') + SS(`M${-R + 3} ${hy - 5} L${-2} ${hy - 1}M${R - 3} ${hy - 5} L${2} ${hy - 1}`, '#2f2f3a', 2.6) + PP(`M${R - 2} ${hy - 4} l18 -6 l-4 12Z`, '#d62839') }),
+    hair: ({ R, hy }) => RC(-R, hy - 3, 2 * R, 11, 5, m === 'angry' ? '#e8a08c' : SK2),
+    front: ({ R, hy }) => (m === 'happy' ? SS(`M${-R * .4 - 4.5} ${hy + 3} q4.5 -6 9 0 M${R * .4 - 4.5} ${hy + 3} q4.5 -6 9 0`, '#2f2f3a', 2.6) : E(-R * .4, hy + 2, 3.2, 2.2, '#fff') + E(R * .4, hy + 2, 3.2, 2.2, '#fff'))
+      + SS(m === 'angry' ? `M${-R + 2} ${hy - 8} L${-2} ${hy - 1} M${R - 2} ${hy - 8} L${2} ${hy - 1}` : `M${-R + 3} ${hy - 5} L${-2} ${hy - 1}M${R - 3} ${hy - 5} L${2} ${hy - 1}`, '#2f2f3a', m === 'angry' ? 3.6 : 2.6)
+      + PP(`M${R - 2} ${hy - 4} l18 -6 l-4 12Z`, '#d62839') }),
   santa: (m = 'wait') => human({ mood: m, pants: '#c92a2a', top: '#d62839', shoes: '#2a2a2a', topDeco: ({ bt, W, B }) => RC(-W / 2, bt + B * .58, W, 8, 0, '#2a2a2a') + RC(-5, bt + B * .58 - 1, 10, 10, 2, '#e9b44c') + RC(-W / 2 + 22, bt, 4, B, 0, '#f6f1e7'),
     sleeve: '#c92a2a', blush: true,
     hair: ({ R, hy }) => PP(`M${-R - 2} ${hy - 4} Q${-R} ${hy - R - 14} ${R * .2} ${hy - R - 20} Q${R} ${hy - R - 8} ${R + 2} ${hy - 4}Z`, '#d62839') + RC(-R - 3, hy - 8, 2 * R + 6, 8, 4, '#f6f1e7') + C(R * .4, hy - R - 20, 5, '#f6f1e7'),
     front: ({ R, hy, bt, B, W }) => PP(`M${-R} ${hy + 4} Q${-R - 2} ${hy + R + 14} 0 ${hy + R + 12} Q${R + 2} ${hy + R + 14} ${R} ${hy + 4} Q0 ${hy + 12} ${-R} ${hy + 4}Z`, '#f6f1e7') + E(0, hy + 7, 5, 3, '#e9b0a0') + E(W / 2 + 12, bt + B * .55, 17, 21, '#7a5a3a') + SS(`M${W / 2 + 4} ${bt + B * .55 - 12} q8 -10 14 0`, '#5a3a1a', 3) }),
-  alien: () => shadow(26) + RC(-6, -30, 5, 30, 2, '#8fd16a') + RC(1, -30, 5, 30, 2, '#8fd16a') + E(-9, -3, 9, 4, '#6fb04a') + E(9, -3, 9, 4, '#6fb04a')
-    + RC(-18, -80, 36, 56, 16, '#c8d0dc') + RC(-30, -76, 12, 40, 6, '#c8d0dc') + RC(18, -76, 12, 40, 6, '#c8d0dc') + C(-24, -34, 5, '#8fd16a') + C(24, -34, 5, '#8fd16a')
-    + C(0, -62, 6, '#e9b44c') + SS('M-18 -62 h36', '#9aa5b5', 1.6)
-    + SS('M-8 -118 L-14 -140 M8 -118 L14 -140', '#8fd16a', 3) + C(-14, -142, 4.6, '#f6e07a') + C(14, -142, 4.6, '#f6e07a')
-    + E(0, -100, 24, 26, '#8fd16a') + E(-10, -100, 8, 11, '#1a2a1a', 'transform="rotate(18 -10 -100)"') + E(10, -100, 8, 11, '#1a2a1a', 'transform="rotate(-18 10 -100)"') + C(-12, -103, 2, '#fff') + C(8, -103, 2, '#fff') + SS('M-5 -84 q5 4 10 0', '#2a5a2a', 1.8),
+  alien: (m = 'wait') => {
+    const skin = m === 'angry' ? '#b9d84a' : '#8fd16a';
+    const eyes2 = m === 'angry' ? E(-10, -100, 8, 9, '#1a2a1a', 'transform="rotate(34 -10 -100)"') + E(10, -100, 8, 9, '#1a2a1a', 'transform="rotate(-34 10 -100)"') + SS('M-19 -111 L-4 -103 M19 -111 L4 -103', '#1a2a1a', 3)
+      : E(-10, -100, 8, 11, '#1a2a1a', 'transform="rotate(18 -10 -100)"') + E(10, -100, 8, 11, '#1a2a1a', 'transform="rotate(-18 10 -100)"') + C(-12, -103, 2, '#fff') + C(8, -103, 2, '#fff');
+    const mo = m === 'happy' ? PP('M-7 -85 Q0 -75 7 -85Z', '#2a5a2a') : m === 'angry' ? SS('M-6 -81 q6 -6 12 0', '#2a5a2a', 2.2) : SS('M-5 -84 q5 4 10 0', '#2a5a2a', 1.8);
+    return shadow(26) + RC(-6, -30, 5, 30, 2, '#8fd16a') + RC(1, -30, 5, 30, 2, '#8fd16a') + E(-9, -3, 9, 4, '#6fb04a') + E(9, -3, 9, 4, '#6fb04a')
+      + RC(-18, -80, 36, 56, 16, '#c8d0dc') + RC(-30, -76, 12, 40, 6, '#c8d0dc') + RC(18, -76, 12, 40, 6, '#c8d0dc') + C(-24, -34, 5, '#8fd16a') + C(24, -34, 5, '#8fd16a')
+      + C(0, -62, 6, '#e9b44c') + SS('M-18 -62 h36', '#9aa5b5', 1.6)
+      + SS('M-8 -118 L-14 -140 M8 -118 L14 -140', '#8fd16a', 3) + C(-14, -142, 4.6, '#f6e07a') + C(14, -142, 4.6, '#f6e07a')
+      + E(0, -100, 24, 26, skin) + eyes2 + mo;
+  },
   /* 幽霊：長い黒髪、白装束、足がなく下半身がすっと消える。人魂つき */
   ghost: (m = 'wait') => {
     const W = '#f3f1ea', FACE = '#dfe6ee', HAIR = '#17171f';
@@ -936,16 +974,27 @@ const CHARS = {
       + PP('M-5 -192 L5 -192 L0 -180Z', '#f6f6f6', 'stroke="#aaa" stroke-width=".8"')
       + `</g>`;
   },
-  penguin: () => shadow(26) + E(-9, -3, 9, 4.5, '#f2994a') + E(9, -3, 9, 4.5, '#f2994a') + E(0, -44, 25, 42, '#23283a') + E(0, -40, 17, 33, '#f6f1e7')
-    + PP('M-24 -56 Q-40 -40 -30 -26 Q-26 -40 -22 -46Z', '#23283a') + PP('M24 -56 Q40 -40 30 -26 Q26 -40 22 -46Z', '#23283a')
-    + C(0, -84, 19, '#23283a') + E(0, -80, 12, 12, '#f6f1e7') + C(-6, -84, 2.4, '#2a2020') + C(6, -84, 2.4, '#2a2020') + PP('M-5 -78 h10 l-5 7Z', '#f2994a'),
-  panda: () => shadow(32) + E(-14, -14, 11, 16, '#2a2a30') + E(14, -14, 11, 16, '#2a2a30') + E(0, -44, 28, 34, '#f6f6f6')
-    + E(-27, -50, 9, 20, '#2a2a30', 'transform="rotate(14 -27 -50)"') + E(27, -50, 9, 20, '#2a2a30', 'transform="rotate(-14 27 -50)"') + RC(30, -70, 5, 62, 2, '#7ab05a')
-    + C(-17, -90, 8, '#2a2a30') + C(17, -90, 8, '#2a2a30') + C(0, -76, 22, '#f6f6f6') + E(-9, -76, 6, 8, '#2a2a30', 'transform="rotate(20 -9 -76)"') + E(9, -76, 6, 8, '#2a2a30', 'transform="rotate(-20 9 -76)"')
-    + C(-9, -76, 2, '#fff') + C(9, -76, 2, '#fff') + E(0, -68, 4.4, 3.2, '#2a2a30') + SS('M-4 -62 q4 4 8 0', '#2a2a30', 1.6),
+  penguin: (m = 'wait') => {
+    const face = m === 'happy' ? SS('M-9 -83 q3 -6 6 0 M3 -83 q3 -6 6 0', INK, 2.4) + C(-12, -78, 3.4, '#f08a8a', 'opacity=".7"') + C(12, -78, 3.4, '#f08a8a', 'opacity=".7"') + PP('M-5 -78 h10 l-5 7Z', '#f2994a') + SS('M-3 -75 q3 3 6 0', '#a85a1a', 1.2)
+      : m === 'angry' ? E(0, -80, 12, 12, 'rgba(224,70,60,.3)') + C(-6, -84, 2.4, INK) + C(6, -84, 2.4, INK) + SS('M-11 -91 L-2 -87 M11 -91 L2 -87', INK, 3.2) + PP('M-5 -72 h10 l-5 -6Z', '#f2994a')
+      : C(-6, -84, 2.4, INK) + C(6, -84, 2.4, INK) + PP('M-5 -78 h10 l-5 7Z', '#f2994a');
+    return shadow(26) + E(-9, -3, 9, 4.5, '#f2994a') + E(9, -3, 9, 4.5, '#f2994a') + E(0, -44, 25, 42, '#23283a') + E(0, -40, 17, 33, '#f6f1e7')
+      + PP('M-24 -56 Q-40 -40 -30 -26 Q-26 -40 -22 -46Z', '#23283a') + PP('M24 -56 Q40 -40 30 -26 Q26 -40 22 -46Z', '#23283a')
+      + C(0, -84, 19, '#23283a') + E(0, -80, 12, 12, '#f6f1e7') + face;
+  },
+  panda: (m = 'wait') => {
+    const rot = m === 'angry' ? 38 : 20;
+    const eyes2 = m === 'happy' ? E(-9, -76, 6, 8, '#2a2a30', 'transform="rotate(20 -9 -76)"') + E(9, -76, 6, 8, '#2a2a30', 'transform="rotate(-20 9 -76)"') + SS('M-12 -76 q3 -4 6 0 M6 -76 q3 -4 6 0', '#fff', 2.2) + C(-15, -66, 3.6, '#f08a8a', 'opacity=".6"') + C(15, -66, 3.6, '#f08a8a', 'opacity=".6"')
+      : E(-9, -76, 6, 8, '#2a2a30', `transform="rotate(${rot} -9 -76)"`) + E(9, -76, 6, 8, '#2a2a30', `transform="rotate(${-rot} 9 -76)"`) + C(-9, -76, m === 'angry' ? 1.6 : 2, '#fff') + C(9, -76, m === 'angry' ? 1.6 : 2, '#fff');
+    const mo = m === 'happy' ? SS('M-5 -62 q5 6 10 0', '#2a2a30', 1.8) : m === 'angry' ? SS('M-5 -59 q5 -5 10 0', '#2a2a30', 1.8) : SS('M-4 -62 q4 4 8 0', '#2a2a30', 1.6);
+    return shadow(32) + E(-14, -14, 11, 16, '#2a2a30') + E(14, -14, 11, 16, '#2a2a30') + E(0, -44, 28, 34, '#f6f6f6')
+      + E(-27, -50, 9, 20, '#2a2a30', 'transform="rotate(14 -27 -50)"') + E(27, -50, 9, 20, '#2a2a30', 'transform="rotate(-14 27 -50)"') + RC(30, -70, 5, 62, 2, '#7ab05a')
+      + C(-17, -90, 8, '#2a2a30') + C(17, -90, 8, '#2a2a30') + C(0, -76, 22, '#f6f6f6') + (m === 'angry' ? C(0, -76, 22, 'rgba(224,70,60,.22)') : '') + eyes2 + E(0, -68, 4.4, 3.2, '#2a2a30') + mo;
+  },
 };
-const SCALE = { oji: .97, oba: .93, onii: 1, onee: .98, boy: 1.05, girl: 1.05, dog: 1.25, cat: 1.25, penguin: 1.2, panda: 1.65, baby: 1.15, thief: 1, ninja: 1, santa: 1.05, alien: 1.1, ghost: 1 };
-const charSVG = k => `<g transform="scale(${SCALE[k] || 1})">${CHARS[k]()}</g>`;
+const SCALE = { oji: .97, oba: .93, onii: 1, onee: .98, boy: 1.12, girl: 1.12, dog: .85, cat: .95, penguin: 1.0, panda: 1.2, baby: 1.0, thief: 1, ninja: 1, santa: 1.05, alien: 1.1, ghost: 1 };
+const OFFSET = { dog: 24, cat: 4, penguin: 0, panda: 12, baby: 8 };   // 右へずらす量（お辞儀の頭と、重ならないように）
+const charSVG = (k, m) => `<g transform="translate(${OFFSET[k] || 0} 0) scale(${SCALE[k] || 1})">${CHARS[k](m)}</g>`;
 const GROUPS = {
   normal: [['oji', 'おじいちゃん'], ['oba', 'おばあちゃん'], ['onii', 'おにいさん'], ['onee', 'おねえさん'], ['boy', '男の子'], ['girl', '女の子']],
   funny: [['dog', '犬'], ['cat', '猫'], ['penguin', 'ペンギン'], ['panda', 'パンダ'], ['baby', '赤ちゃん'], ['thief', '泥棒'], ['ninja', '忍者'], ['santa', 'サンタ'], ['alien', '宇宙人'], ['ghost', '幽霊']],
