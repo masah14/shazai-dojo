@@ -1146,12 +1146,13 @@ function setTargetArc(t) {
   const d = `M ${cx} ${cy - r} A ${r} ${r} 0 ${Math.abs(t) > 180 ? 1 : 0} ${t >= 0 ? 1 : 0} ${x.toFixed(1)} ${y.toFixed(1)}`;   // マイナスは、反対まわり
   F_ARC.setAttribute('d', d); F_ARC2.setAttribute('d', d);
   F_GHOST.setAttribute('transform', `rotate(${t} 120 148)`);
+  if (VS.opp) { $('.tarc', VS.opp).setAttribute('d', d); $('.tarc-halo', VS.opp).setAttribute('d', d); $('.ghost', VS.opp).setAttribute('transform', `rotate(${t} 120 148)`); }   // 対戦の相手にも、同じお題の影
 }
 
 /* ---------- 対戦の絵：2人は向かい合って、真ん中に先生。3人以上は、同じ向きで少し重なって並び、先生は右端 ---------- */
 // ランクマッチと友達対戦（G.kind === 'online'）だけ。一人のときと、ほかのモードは、これまでの絵のまま
 const SVGNS = 'http://www.w3.org/2000/svg';
-const VS = { on: false, key: '', root: null, top: null, figs: {}, plates: {}, flags: null };
+const VS = { on: false, key: '', root: null, top: null, figs: {}, plates: {}, flags: null, opp: null };
 const FIG_PL = $('.pl', FIG), FIG_CUST_OUT = $('.cust', FIG).parentNode.parentNode;
 const PL_HOME = FIG_PL.getAttribute('transform'), CUST_HOME = FIG_CUST_OUT.getAttribute('transform');
 const vsPlace = (cx, s) => `translate(${cx - 120} 0) translate(120 232) scale(${s}) translate(-120 -232)`;
@@ -1160,12 +1161,12 @@ function vsReset() {
   VS.on = false; VS.key = '';
   FIG_PL.setAttribute('transform', PL_HOME); FIG_CUST_OUT.setAttribute('transform', CUST_HOME);
   if (VS.root) VS.root.remove(); if (VS.top) VS.top.remove();
-  VS.root = VS.top = VS.flags = null; VS.figs = {}; VS.plates = {};
+  VS.root = VS.top = VS.flags = VS.opp = null; VS.figs = {}; VS.plates = {};
   $('#s-game').classList.remove('vs2');
 }
-function vsClone(cx, s, mirror) {   // 自分の絵をコピーして、相手の絵にする（お題の影は、自分の分だけ）
+function vsClone(cx, s, mirror, keepGhost) {   // 自分の絵をコピーして、相手の絵にする（お題の影は、2人のときだけ、相手にも出す）
   const el = FIG_PL.cloneNode(true);
-  $$('.ghost,.tarc,.tarc-halo', el).forEach(n => n.remove());
+  if (!keepGhost) $$('.ghost,.tarc,.tarc-halo', el).forEach(n => n.remove());
   el.setAttribute('transform', vsPlace(cx, s));
   if (!mirror) return el;
   const g = document.createElementNS(SVGNS, 'g'); g.setAttribute('transform', 'translate(300 0) scale(-1 1)'); g.appendChild(el); return g;
@@ -1183,7 +1184,8 @@ function vsApply() {
   VS.figs = { [Net.myId]: F_TORSO };
   if (n === 2) {
     FIG_PL.setAttribute('transform', vsPlace(30, .85));
-    const o = others[0], g = vsClone(30, .85, true); root.appendChild(g); VS.figs[o.id] = $('.torso', g);
+    const o = others[0], g = vsClone(30, .85, true, true); root.appendChild(g); VS.figs[o.id] = $('.torso', g); VS.opp = g;
+    if (R) setTargetArc(R.target);
     FIG_CUST_OUT.setAttribute('transform', 'translate(-82 0)');   // 先生：真ん中
     $('#s-game').classList.add('vs2');
     const flag = (cls, pole, cloth) => `<g class="${cls}" style="display:none"><path d="${pole}" stroke="#6b3f1d" stroke-width="3" stroke-linecap="round" fill="none"/><path d="${cloth}" fill="#d62839" stroke="#a01c14" stroke-width="1"/></g>`;
