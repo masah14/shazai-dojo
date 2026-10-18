@@ -300,6 +300,14 @@ svg .mqbase{fill:#2d3340}
 .rank .n{font-family:var(--serif);font-size:26px;width:30px;text-align:center}
 .rank .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:18px}
 .rank .tt{font-variant-numeric:tabular-nums;font-weight:700}
+.rank .tr{font-size:12px;color:var(--dim);white-space:nowrap}
+.rank li:first-child .tr{color:#6b6458}
+.rm-me{background:rgba(246,241,231,.08);border-radius:16px;padding:12px 16px;text-align:center}
+.rm-tier{font-family:var(--serif);font-size:24px;color:var(--gold);letter-spacing:.14em}
+.rm-rate{font-family:var(--serif);font-size:56px;line-height:1.1;font-variant-numeric:tabular-nums}
+.rm-rate small{font-size:15px;color:var(--dim);margin-left:6px;letter-spacing:.05em}
+.rm-rec{color:var(--dim);font-size:14px}
+.rm-h{margin:10px 0 0;font-family:var(--serif);font-size:18px;letter-spacing:.06em}
 .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .seg button{appearance:none;border:1.5px solid var(--line);background:none;border-radius:10px;padding:10px 4px;font-size:14px;cursor:pointer}
 .seg button.on{background:var(--paper);color:var(--ink);border-color:var(--paper);font-weight:700}
@@ -341,6 +349,7 @@ svg .mqbase{fill:#2d3340}
         <button class="btn ghost small" id="b-rank" type="button">今日のランキングを見る</button>
         <button class="btn ghost small" id="b-rank-y" type="button">昨日のランキングを見る</button>
       </div>
+      <button class="btn paper" id="b-ranked">ランクマッチ<small id="b-ranked-sub">知らない人とリアルタイム対戦。レートを上げよう</small></button>
       <button class="btn paper" id="b-solo">一人で遊ぶ<small>練習 / サバイバル / ノーミス / スコアアタック</small></button>
       <button class="btn paper" id="b-online">友達とオンライン対戦<small>お題は同じ。ズレの合計が少ない人の勝ち</small></button>
       <div class="row2">
@@ -379,6 +388,26 @@ svg .mqbase{fill:#2d3340}
       <button class="btn primary" id="on-join">入る</button>
     </div>
     <p class="note">同じWi-Fiなら確実につながります。モバイル回線どうしだと、つながらないことがあります。</p>
+  </section>
+
+  <!-- ランクマッチ -->
+  <section id="s-ranked" class="screen wood">
+    <button class="back" data-go="s-menu">← 戻る</button>
+    <h2>ランクマッチ</h2>
+    <p class="note">知らない人と、リアルタイムで1問勝負。同じお題で、ズレが小さいほうが勝ちです。勝つとレートが上がり、称号が変わります。</p>
+    <div class="seg" id="rm-kind" style="grid-template-columns:repeat(2,1fr)">
+      <button type="button" data-k="sensor">センサー部門</button>
+      <button type="button" data-k="slider">スライダー部門</button>
+    </div>
+    <p class="note" id="rm-kind-note" style="font-size:12px;margin:-6px 0 0"></p>
+    <div class="rm-me" id="rm-me"></div>
+    <div class="rk-msg" id="rm-state" style="padding:4px 0;white-space:pre-line"></div>
+    <button class="btn primary" id="rm-find">対戦相手を探す</button>
+    <button class="btn ghost" id="rm-cancel" hidden>探すのをやめる</button>
+    <button class="btn paper" id="rm-bot" hidden>CPUと練習対戦（レートは動きません）</button>
+    <h3 class="rm-h">レートランキング</h3>
+    <div id="rm-board"></div>
+    <p class="note" style="font-size:12px">途中で抜けると、負けになります。通信が切れて相手が40秒反応しないときは、不戦勝です。</p>
   </section>
 
   <!-- ロビー -->
@@ -542,6 +571,10 @@ try {
   S = Object.assign(S, j);
   S.params = Object.assign({ survival: 10, nomiss: 3, score: 5 }, j.params || {});
   S.best = j.best || {};
+  // 古い形の記録（部門を分ける前）を、新しい形（部門ごと）に移す
+  if (S.dailyRec) { S.dailyRecs = S.dailyRecs || {}; S.dailyRecs[S.dailyRec.kind || 'slider'] = S.dailyRec; delete S.dailyRec; }
+  if (S.dailyTop) { S.dailyTops = S.dailyTops || {}; S.dailyTops[S.dailyTop.kind || 'slider'] = { day: S.dailyTop.day, total: S.dailyTop.total }; delete S.dailyTop; }
+  if (S.rm && S.rm.rating != null) delete S.rm;
 } catch (e) {}
 if (!S.name) S.name = 'ゲスト' + randInt(10, 99);
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
@@ -618,8 +651,10 @@ document.addEventListener('pointerdown', () => sfx.unlock(), { once: true });
 
 /* ---------- 画面 ---------- */
 let current = 's-menu';
+let onScreen = () => {};   // 画面が替わったときの後始末（ランクマッチの待機をやめる、通信を切る）。あとで設定する
 function show(id) {
   current = id;
+  onScreen(id);
   $$('.screen').forEach(s => s.classList.toggle('on', s.id === id));
   wake(id === 's-game');
   if (id === 's-set') refreshSet();
@@ -817,7 +852,8 @@ const Sensor = {
     setTimeout(() => { Sensor.checked = true; }, 1500);
   },
 };
-const sliderMode = () => S.input === 'slider' || (S.input === 'auto' && Sensor.checked && !Sensor.got);
+let forceSlider = false;   // スライダー部門に挑戦するとき、センサーがある端末でも、スライダーで操作する
+const sliderMode = () => forceSlider || S.input === 'slider' || (S.input === 'auto' && Sensor.checked && !Sensor.got);
 // ゼロ調整：構えた姿勢を0°、水平を90°として、前側は線形に伸ばす。後ろ側（マイナス）は、そのまま
 const mapZero = raw => { const z = clamp(S.zero || 0, 0, 45); return raw >= z ? (raw - z) * 90 / (90 - z) : raw - z; };
 const curAngle = () => clamp(sliderMode() ? Sensor.slider : mapZero(Sensor.angle), -110, 130);
@@ -935,7 +971,7 @@ function doLock(a) {
   // 答え合わせ：ここで初めて絵が、押した角度までお辞儀する
   FIG.classList.remove('hardmode');
   setTorso(r.angle, true);
-  if (G.kind === 'online') onlineLocked();
+  if (G.kind === 'online') { if (RM.on) rmLocked(); else onlineLocked(); }
   setTimeout(() => {
     if (R !== r) return;
     setMood(moodOf(r.err), true); flash(r.err <= 1.5 ? 2 : 1);
@@ -976,7 +1012,7 @@ function frame() {
     else if (sm && Sensor.denied && !Sensor.got) hint = 'センサーが許可されていないので、スライダーで角度を決めて、OKを押してください';
     else if (G.kind === 'solo' && G.mode === 'practice') hint = '赤い影がお題の角度です。合わせてOKを押してみましょう';
     else hint = 'お題の角度だと思うところでスマホを止めて、OKを押してください';
-  } else if (G.kind === 'online') hint = '他の人を待っています…';
+  } else if (G.kind === 'online') hint = RM.on && RM.waitMsg ? RM.waitMsg : (RM.on ? '相手を待っています…' : '他の人を待っています…');
   if (last.hint !== hint) { last.hint = hint; $('#g-hint').textContent = hint; }
   let tm = '';
   if (R.limit && R.phase !== 'locked') tm = Math.max(0, Math.ceil((R.limit - (performance.now() - R.t0)) / 1000)) + 's';
@@ -1029,14 +1065,24 @@ inName.value = S.name;
 inName.addEventListener('input', () => { S.name = inName.value.trim().slice(0, 10) || 'ゲスト'; save(); });
 $('#b-daily').onclick = () => { Sensor.enable(); sfx.unlock(); startSolo('daily'); };
 $('#b-solo').onclick = () => { Sensor.enable(); sfx.unlock(); buildSolo(); show('s-solo'); };
-// 本番謝罪の記録（途中でやめても、続きから再開できる）。S.dailyTop は、今日のベスト（ランキングに送る分）
-const dailyRec = () => (S.dailyRec && S.dailyRec.day === dailyId()) ? S.dailyRec : null;
-const dailyTop = () => (S.dailyTop && S.dailyTop.day === dailyId()) ? S.dailyTop : null;
+// 本番謝罪の記録は、部門（sensor / slider）ごとに持つ。途中でやめても、続きから再開できる。
+// S.dailyTops は、今日のベスト（ランキングに送る分）
+const DKINDS = ['sensor', 'slider'];
+const dailyRec = k => { const r = S.dailyRecs && S.dailyRecs[k]; return r && r.day === dailyId() ? r : null; };
+const dailyTop = k => { const r = S.dailyTops && S.dailyTops[k]; return r && r.day === dailyId() ? r : null; };
+const curKind = () => sliderMode() ? 'slider' : 'sensor';   // いまの操作方法が、どちらの部門か
 function updateMenu() {
-  const r = dailyRec(), top = dailyTop();
-  $('#b-daily-sub').textContent = r && r.log.length && !r.done ? `途中から再開できます（${r.log.length} / 5 問 終わり）`
-    : DAILY_ONCE ? (r && r.done ? `挑戦済み：合計 ${fmt(r.total)}°（また明日！）` : '5問の誤差の合計で、全国の順位がつきます')
-    : top ? `いまはテスト中：何回でも遊べます（今日のベスト ${fmt(top.total)}°）` : 'いまはテスト中：何回でも遊べます';
+  const rb = $('#b-ranked-sub'), rk = S.rm && S.rm[curKind()];
+  if (rb) rb.textContent = rk ? `あなたのレート ${rk.rating}（${tierOf(rk.rating)}）　知らない人と1問勝負` : '知らない人とリアルタイム対戦。レートを上げよう';
+  const rs = { sensor: dailyRec('sensor'), slider: dailyRec('slider') };
+  const prog = DKINDS.map(k => rs[k]).find(r => r && r.log.length && !r.done);
+  const both = rs.sensor && rs.sensor.done && rs.slider && rs.slider.done, some = (rs.sensor && rs.sensor.done) || (rs.slider && rs.slider.done);
+  const st = k => rs[k] && rs[k].done ? `${fmt(rs[k].total)}°` : '未挑戦';
+  $('#b-daily-sub').textContent = prog ? `途中から再開できます（${KINDS[prog.kind]}・${prog.log.length} / 5 問 終わり）`
+    : !DAILY_ONCE ? 'いまはテスト中：何回でも遊べます'
+    : both ? '両方の部門に挑戦ずみ（また明日！）'
+    : some ? `センサー ${st('sensor')}　スライダー ${st('slider')}（挑戦は部門ごとに1回）`
+    : '5問の誤差の合計で、全国の順位がつきます（部門ごとに1回）';
 }
 $('#b-online').onclick = () => { Sensor.enable(); sfx.unlock(); show('s-online'); };
 $('#b-set').onclick = () => { Sensor.enable(); show('s-set'); };
@@ -1073,12 +1119,23 @@ function buildSolo() {
 function startSolo(mode) {
   Sensor.enable();
   const daily = mode === 'daily', day = dailyId();
-  let rec = daily ? dailyRec() : null;
-  if (rec && rec.done) {
-    if (DAILY_ONCE) { toast('今日はもう挑戦済みです。また明日！'); openRank('today'); return; }
-    S.dailyRec = null; rec = null; save();   // テスト中は何回でも：新しく始める（今日のベストは S.dailyTop に残る）
+  let rec = null, dk = null;
+  if (daily) {
+    // 途中の記録があれば、その部門の続きから。なければ、いまの操作方法の部門で始める
+    dk = DKINDS.find(k => { const r = dailyRec(k); return r && r.log.length && !r.done; }) || curKind();
+    rec = dailyRec(dk);
+    if (rec && rec.done) {
+      if (DAILY_ONCE) {   // 挑戦は、部門ごとに1回。もう一方の部門が、まだなら、そちらに挑戦できる
+        const other = dk === 'sensor' ? 'slider' : 'sensor', ro = dailyRec(other);
+        if (ro && ro.done) { toast('今日は、両方の部門に挑戦ずみです。また明日！'); openRank('today'); return; }
+        if (other === 'slider') { if (!confirm(`${KINDS[dk]}は、挑戦ずみです。\nスライダー部門（画面のスライダーで操作）に挑戦しますか？`)) return; }
+        else { toast('スライダー部門は挑戦ずみです。センサー部門に挑戦するには、設定で操作を「センサー」に戻してください'); return; }
+        dk = other; rec = ro;
+      } else { if (S.dailyRecs) delete S.dailyRecs[dk]; rec = null; save(); }   // テスト中は何回でも：新しく始める（今日のベストは S.dailyTops に残る）
+    }
+    forceSlider = dk === 'slider';   // スライダー部門は、センサーがある端末でも、スライダーで遊ぶ
   }
-  G = { kind: 'solo', mode, base: daily ? 'score' : mode, param: daily ? 5 : S.params[mode], round: 0, total: 0, cleared: 0, log: [], prev: null, autoT: 0, streak: 0, day, targets: daily ? dailyTargets(day) : null, input: daily && rec && rec.kind || null };
+  G = { kind: 'solo', mode, base: daily ? 'score' : mode, param: daily ? 5 : S.params[mode], round: 0, total: 0, cleared: 0, log: [], prev: null, autoT: 0, streak: 0, day, targets: daily ? dailyTargets(day) : null, input: daily ? dk : null };
   if (rec && rec.log.length) {   // 途中でやめていたら、答えた分はそのまま、続きから
     G.log = rec.log.map(l => ({ target: l.target, angle: l.angle, err: l.err }));
     G.total = rec.total; G.round = G.log.length; G.cleared = G.log.length;
@@ -1103,16 +1160,18 @@ function soloLocked() {
   else if (G.base === 'nomiss') { if (err > G.param) over = true; else G.cleared++; }
   else if (G.base === 'score') { G.cleared++; if (G.round >= G.param) done = true; }
   if (G.mode === 'daily') {   // 1問ごとに保存する。途中でやめても続きから。5問目で、今回の記録が確定する
-    const n = G.log.length;
+    const n = G.log.length, prevK = G.input;
     // 入力方式：1問でもスライダーを使ったら、全体が「スライダー部門」。ぜんぶセンサーのときだけ「センサー部門」
     G.input = (G.input === 'slider' || sliderMode()) ? 'slider' : 'sensor';
+    S.dailyRecs = S.dailyRecs || {}; S.dailyTops = S.dailyTops || {};
+    if (prevK && prevK !== G.input && S.dailyRecs[prevK] && !S.dailyRecs[prevK].done) delete S.dailyRecs[prevK];   // 途中でセンサーが途切れて、スライダー部門に変わったとき
     let sent = false;
-    if (done) {   // 今日のベストを更新したときだけ、ランキングに送る（送るものが無ければ「送信ずみ」扱い）
-      const top = dailyTop(), better = !top || G.total < top.total;
-      if (better) S.dailyTop = { day: G.day, total: G.total, kind: G.input };
+    if (done) {   // その部門の今日のベストを更新したときだけ、ランキングに送る（送るものが無ければ「送信ずみ」扱い）
+      const top = dailyTop(G.input), better = !top || G.total < top.total;
+      if (better) S.dailyTops[G.input] = { day: G.day, total: G.total };
       sent = !better;
     }
-    S.dailyRec = { day: G.day, log: G.log, total: G.total, avg: n ? r1(G.total / n) : 0, done, sent, kind: G.input };
+    S.dailyRecs[G.input] = { day: G.day, log: G.log, total: G.total, avg: n ? r1(G.total / n) : 0, done, sent, kind: G.input };
     save();
   }
   updateHeader();
@@ -1326,7 +1385,7 @@ async function shareResult() {
 $('#fi-share').onclick = () => shareResult();
 $('#g-quit').onclick = () => {
   if (!confirm(G && G.mode === 'daily' ? 'やめても、今日は後で続きから再開できます。やめますか？' : 'やめますか？')) return;
-  if (G && G.kind === 'online') leaveRoom();
+  if (G && G.kind === 'online') { if (RM.on) rmLeave(); else leaveRoom(); }
   else { clearTimeout(G && G.autoT); R = null; if (G && G.mode === 'daily') show('s-menu'); else { buildSolo(); show('s-solo'); } }
 };
 
@@ -1365,34 +1424,40 @@ const yesterdayId = () => new Date(Date.now() + 9 * 3600 * 1000 - 24 * 3600 * 10
 async function openRank(view) {
   rankView = view === 'yesterday' ? 'yesterday' : 'today';
   const day = view === 'yesterday' ? yesterdayId() : dailyId();
-  const mine = (S.dailyRec && S.dailyRec.day === day && S.dailyRec.kind) || (S.dailyTop && S.dailyTop.day === day && S.dailyTop.kind);
-  rankKind = mine || (sliderMode() ? 'slider' : 'sensor');
+  const has = k => S.dailyRecs && S.dailyRecs[k] && S.dailyRecs[k].day === day;
+  rankKind = has(curKind()) ? curKind() : (DKINDS.find(has) || curKind());   // 自分の記録がある部門を、先に見せる
   show('s-rank'); await loadRank();
 }
-// 記録が終わっているのに、まだ送れていないときは、ここで送り直す
+// 記録が終わっているのに、まだ送れていないときは、ここで送り直す（部門ごと）
 async function ensureSent() {
-  const rec = dailyRec();
-  if (!rankOn() || !rec || !rec.done || rec.sent) return;
-  const r = await rankSubmit(rec.day, rec.kind || 'slider', rec.total, rec.avg);
-  if (r) { rec.sent = true; save(); }
+  if (!rankOn()) return;
+  for (const k of DKINDS) {
+    const rec = dailyRec(k);
+    if (!rec || !rec.done || rec.sent) continue;
+    const r = await rankSubmit(rec.day, k, rec.total, rec.avg);
+    if (r) { rec.sent = true; save(); }
+  }
 }
 async function loadRank() {
   const isToday = rankView === 'today', day = isToday ? dailyId() : yesterdayId(), label = isToday ? '今日' : '昨日';
-  const body = $('#rk-body'), rec = dailyRec(), play = $('#rk-play');
+  const body = $('#rk-body'), play = $('#rk-play');
   $('#rk-day').textContent = isToday
-    ? `${day}　${DAILY_ONCE ? '1日1回・' : 'いまはテスト中：何回でも挑戦できます・'}毎日0時（日本時間）に新しくなります`
+    ? `${day}　${DAILY_ONCE ? '部門ごとに1回・' : 'いまはテスト中：何回でも挑戦できます・'}毎日0時（日本時間）に新しくなります`
     : `昨日（${day}）のランキング`;
   $('#rk-yday').textContent = isToday ? '昨日のランキングを見る' : '今日のランキングを見る';
   $$('#rk-kind button').forEach(b => b.classList.toggle('on', b.dataset.k === rankKind));
   $('#rk-kind-note').textContent = KIND_NOTE[rankKind];
-  if (DAILY_ONCE && rec && rec.done) { play.textContent = '今日は挑戦ずみ（また明日！）'; play.disabled = true; }
-  else if (rec && rec.log.length && !rec.done) { play.textContent = `続きから挑戦する（${rec.log.length} / 5 問 終わり）`; play.disabled = false; }
-  else { play.textContent = DAILY_ONCE ? '本番に挑戦する（1日1回）' : '本番に挑戦する（いまは何回でもOK）'; play.disabled = false; }
-  // この端末にある、その日の記録（ベスト）
-  const dayRec = S.dailyRec && S.dailyRec.day === day && S.dailyRec.done ? S.dailyRec : null;
-  const dayTop = S.dailyTop && S.dailyTop.day === day ? S.dailyTop : null;
+  const rs = { sensor: dailyRec('sensor'), slider: dailyRec('slider') };
+  const prog = DKINDS.map(k => rs[k]).find(r => r && r.log.length && !r.done);
+  const both = rs.sensor && rs.sensor.done && rs.slider && rs.slider.done, some = (rs.sensor && rs.sensor.done) || (rs.slider && rs.slider.done);
+  if (DAILY_ONCE && both) { play.textContent = '今日は、両方の部門に挑戦ずみ（また明日！）'; play.disabled = true; }
+  else if (prog) { play.textContent = `続きから挑戦する（${KINDS[prog.kind]}・${prog.log.length} / 5 問 終わり）`; play.disabled = false; }
+  else if (DAILY_ONCE && some) { play.textContent = 'もう一方の部門に挑戦する'; play.disabled = false; }
+  else { play.textContent = DAILY_ONCE ? '本番に挑戦する（部門ごとに1回）' : '本番に挑戦する（いまは何回でもOK）'; play.disabled = false; }
+  // この端末にある、見ている部門の、その日の記録（ベスト）
+  const rr = S.dailyRecs && S.dailyRecs[rankKind], tt = S.dailyTops && S.dailyTops[rankKind];
+  const dayRec = rr && rr.day === day && rr.done ? rr : null, dayTop = tt && tt.day === day ? tt : null;
   const mineTotal = dayTop ? dayTop.total : dayRec ? dayRec.total : null;
-  const mineKind = (dayTop && dayTop.kind) || (dayRec && dayRec.kind) || null;   // 自分の記録がある部門
   if (!rankOn()) {
     body.innerHTML = `<div class="rk-msg">全国のランキングは、準備中です。<br>${mineTotal != null ? `この端末の${label}の記録：<b style="color:var(--gold)">${fmt(mineTotal)}°</b>` : `${label}はまだ挑戦していません`}</div>`;
     return;
@@ -1407,7 +1472,7 @@ async function loadRank() {
     const rows = list.slice(0, 50).map((x, i) => rankRow(x, i, x.id === id));
     if (at >= 50) rows.push('<li class="rk-gap" style="background:none;padding:0;justify-content:center">・・・</li>', rankRow(list[at], at, true));
     const head = `<div class="rk-msg" style="padding:0 0 10px">${label}の参加者：${list.length}人${list.length >= RANK_N ? '以上' : ''}${at >= 0 ? `　あなた：<b style="color:var(--gold)">${at + 1}位</b>` : ''}</div>`;
-    const out = at < 0 && mineTotal != null && (!mineKind || mineKind === kind);
+    const out = at < 0 && mineTotal != null;
     body.innerHTML = head + `<ul class="rank" style="padding:0;margin:0">${rows.join('')}</ul>` + (out ? `<div class="rk-msg">あなたは${RANK_N}位圏外です（${label}の記録 ${fmt(mineTotal)}°）</div>` : '');
   } catch (e) { body.innerHTML = '<div class="rk-msg">ランキングにつながりませんでした。<br>「更新する」をもう一度押してください。</div>'; }
 }
@@ -1697,6 +1762,404 @@ function hostEnd() {
   const m = { t: 'end', ranking };
   bcast(m); onNetMsg(m);
 }
+
+/* ---------- ランクマッチ（1問勝負のレート戦） ----------
+   知らない人どうしでもつながるように、ブラウザ同士は直接つながず、Firebase Realtime Database を中継にする。
+   ・各自が、自分の記録（角度・ズレ）だけを書き込む。両方の画面が、同じデータから結果を出す
+   ・レートの不正（勝敗の偽り、二重の精算、負けの回避など）は、サーバー側のルールが止める（ランキング設定.md）
+   ・途中で抜けると負け。相手が40秒反応しなければ、残った側が不戦勝
+   ・Firebase の部品は、ランクマッチを開いたときに、はじめて読み込む（ふだんの遊びには、影響しない） */
+const RMFB = { ver: '10.14.1', cfg: { apiKey: 'AIzaSyCZtL28ObBBof9oqW3BQognfvpV_s72ySw', authDomain: 'shazai-dojo.firebaseapp.com', databaseURL: RANK.url, projectId: 'shazai-dojo', appId: '1:40359400479:web:a02dd4f63e16e8a750312a' } };
+const FB = { ready: null, m: null, db: null, auth: null, uid: null, offset: 0 };
+const RM = { on: false, bot: false, phase: 'idle', kind: 'sensor', mid: null, data: null, me: null, opp: null, target: 0, profile: null, ended: false, res: null, showBot: false, waitMsg: '' };
+// ランクマッチは、部門（sensor / slider）ごとに、レート・待ち行列・対戦を、完全に分ける
+const rkp = (p, k) => 'rk/' + (k || RM.kind) + '/' + p;
+const RM_KIND_NOTE = { sensor: 'スマホを傾けて遊ぶ部門です。', slider: '画面のスライダーで遊ぶ部門です（パソコンでも遊べます）。' };
+const RM_K = 24;   // 1回の勝ち負けで動くレートの大きさ（最大でも、サーバーのルールの上限32の内側）
+const RM_NG = ['死ね', 'しね', '殺す', 'ころす', 'ちんこ', 'まんこ', 'レイプ', 'ガイジ', '池沼'];   // 最低限の言葉。ほかは、運営がコンソールから消す
+const RM_TIERS = [[0, '見習い'], [900, '会釈'], [1050, '敬礼'], [1200, '最敬礼'], [1350, '深謝'], [1500, '土下座']];
+const RM_BOTS = ['道場生ゴロー', '師範代ハナ', '見習いタロウ', '先輩ケンジ', '新人ミサキ'];
+const randHex = n => Array.from(crypto.getRandomValues(new Uint8Array(n / 2)), b => b.toString(16).padStart(2, '0')).join('');
+function tierOf(r) { let t = RM_TIERS[0][1]; for (const [v, n] of RM_TIERS) if (r >= v) t = n; return t; }
+const rmSafeName = () => { const n = String(S.name || '').trim().slice(0, 10) || 'ゲスト'; return RM_NG.some(w => n.includes(w)) ? 'ゲスト' + randInt(10, 99) : n; };
+// 勝ちなら必ず+1以上、負けなら必ず-1以下、引き分けは0（サーバーのルールと同じ決まり）
+function rmDelta(me, opp, res) {
+  if (res === 'draw') return 0;
+  const e = 1 / (1 + Math.pow(10, (opp - me) / 400)), d = Math.round(RM_K * ((res === 'win' ? 1 : 0) - e));
+  return res === 'win' ? clamp(d, 1, 32) : clamp(d, -32, -1);
+}
+const srvNow = () => Date.now() + FB.offset;
+async function fbInit() {
+  if (FB.ready) return FB.ready;
+  FB.ready = (async () => {
+    const base = `https://www.gstatic.com/firebasejs/${RMFB.ver}/`;
+    const [a, au, d] = await Promise.all([import(base + 'firebase-app.js'), import(base + 'firebase-auth.js'), import(base + 'firebase-database.js')]);
+    FB.m = { ...a, ...au, ...d };
+    const app = a.initializeApp(RMFB.cfg);
+    FB.auth = au.getAuth(app); FB.db = d.getDatabase(app);
+    let user = await new Promise(res => { const un = au.onAuthStateChanged(FB.auth, u => { un(); res(u); }); });
+    if (!user) user = (await au.signInAnonymously(FB.auth)).user;
+    FB.uid = user.uid;
+    d.onValue(d.ref(FB.db, '.info/serverTimeOffset'), s => { FB.offset = s.val() || 0; });
+    return FB;
+  })().catch(e => { FB.ready = null; throw e; });
+  return FB.ready;
+}
+const dbRef = p => FB.m.ref(FB.db, p);
+const dbGet = async p => (await FB.m.get(dbRef(p))).val();
+const dbSet = (p, v) => FB.m.set(dbRef(p), v);
+const dbUpdate = (p, v) => FB.m.update(dbRef(p), v);
+const dbRemove = p => FB.m.remove(dbRef(p));
+const TSV = () => FB.m.serverTimestamp();
+function rmGoOnline() { try { FB.m.goOnline(FB.db); } catch (e) {} }
+function rmConnected(ms = 10000) {
+  return new Promise((res, rej) => {
+    let un = null; const t = setTimeout(() => { try { un && un(); } catch (e) {} rej(new Error('timeout')); }, ms);
+    un = FB.m.onValue(dbRef('.info/connected'), s => { if (s.val()) { clearTimeout(t); try { un && un(); } catch (e) {} res(); } });
+  });
+}
+function rmCache(p, k) { if (p) { S.rm = S.rm || {}; S.rm[k || RM.kind] = { rating: p.rating, games: p.games, wins: p.wins, losses: p.losses, draws: p.draws }; save(); } }
+async function rmLoadProfile(create, k = RM.kind) {
+  await fbInit();
+  const path = rkp('ratings/' + FB.uid, k), name = rmSafeName();
+  let p = await dbGet(path);
+  if (!p && create) { await dbSet(path, { name, rating: 1000, games: 0, wins: 0, losses: 0, draws: 0, ts: TSV() }); p = await dbGet(path); }
+  else if (p && p.name !== name && !p.inMatch) { await dbUpdate(path, { name }); p.name = name; }
+  if (k === RM.kind) RM.profile = p || null;
+  rmCache(p, k);
+  return p;
+}
+// レートの精算：勝ち・負け・引き分けを、1回だけ書き込む。'none' は、相手が来なかった対戦（ノーカウント）
+async function rmApply(res, oppRating, mid, k = RM.kind) {
+  const path = rkp('ratings/' + FB.uid, k), p = await dbGet(path);
+  if (!p || p.inMatch !== mid) return { res, delta: 0, rating: p ? p.rating : 1000, old: p ? p.rating : 1000, already: true };
+  if (res === 'none') { await dbUpdate(path, { inMatch: null }); return { res, delta: 0, rating: p.rating, old: p.rating }; }
+  const d = rmDelta(p.rating, oppRating, res), nr = clamp(p.rating + d, 100, 4000);
+  const upd = { rating: nr, games: p.games + 1, inMatch: null, last: mid, ts: TSV() };
+  if (res === 'win') upd.wins = p.wins + 1; else if (res === 'loss') upd.losses = p.losses + 1; else upd.draws = p.draws + 1;
+  await dbUpdate(path, upd);
+  const np = { ...p, ...upd }; delete np.inMatch; delete np.ts; if (k === RM.kind) RM.profile = np; rmCache(np, k);
+  return { res, delta: nr - p.rating, rating: nr, old: p.rating };
+}
+// 前回、途中で閉じた対戦が残っているとき：相手の様子を見て、勝ち・負け・ノーカウントを決めて精算する（部門ごと）
+async function rmSettleLeftover(p, k = RM.kind) {
+  const mid = p.inMatch, me = FB.uid, m = await dbGet(rkp('matches/' + mid, k));
+  const opp = m && m.meta ? (m.meta.a === me ? m.meta.b : m.meta.a) : null, rr = (m && m.r) || {};
+  const done = !!(opp && rr[me] && rr[opp]);
+  const oppLeft = !!(m && opp && ((m.leave && m.leave[opp]) || (m.forfeit && m.forfeit[opp])));
+  const oppMissing = !m || !opp || !(m.p && m.p[opp]);
+  const oppRating = (m && opp && m.p && m.p[opp] && m.p[opp].rating) || 1000;
+  let res;
+  if (done) res = rr[me].e < rr[opp].e - 0.001 ? 'win' : rr[me].e > rr[opp].e + 0.001 ? 'loss' : 'draw';
+  else if (oppLeft) res = 'win';
+  else if (oppMissing) res = 'none';
+  else res = 'loss';
+  await rmApply(res, oppRating, mid, k);
+  return res;
+}
+// ふたつの部門の、前回の対戦を、まとめて精算する
+async function rmSettleAll() {
+  let any = false;
+  for (const k of DKINDS) {
+    const p = await rmLoadProfile(false, k);
+    if (p && p.inMatch) { await rmSettleLeftover(p, k); await rmLoadProfile(false, k); any = true; }
+  }
+  return any;
+}
+
+/* --- ランクマッチの入口（部門・レート・称号・ランキング） --- */
+function rmRenderMe() {
+  const k = RM.kind, p = RM.profile || (S.rm && S.rm[k]), r = p ? p.rating : 1000;
+  $$('#rm-kind button').forEach(b => b.classList.toggle('on', b.dataset.k === k));
+  $('#rm-kind-note').textContent = RM_KIND_NOTE[k];
+  $('#rm-me').innerHTML = `<div class="rm-tier">${tierOf(r)}</div><div class="rm-rate">${r}<small>レート</small></div><div class="rm-rec">${p && p.games ? `${p.wins}勝 ${p.losses}敗 ${p.draws}分（${p.games}戦）` : 'まだ対戦していません'}</div>`;
+}
+// 部門を切り替える（探している最中・対戦中は、切り替えない）
+async function rmSetKind(k) {
+  if (RM.on || RM.phase === 'search' || RM.phase === 'join' || k === RM.kind) return;
+  RM.kind = k; RM.profile = null; rmRenderMe(); rmUI('idle');
+  try { await fbInit(); rmGoOnline(); await rmConnected(); await rmLoadProfile(false); rmRenderMe(); rmLoadBoard(); }
+  catch (e) { rmUI('error', '接続できませんでした。通信環境を確認してください'); }
+}
+function rmUI(state, msg) {
+  RM.uiState = state;
+  $('#rm-find').hidden = !(state === 'idle' || state === 'error');
+  $('#rm-cancel').hidden = state !== 'search';
+  $('#rm-bot').hidden = !(state === 'search' && RM.showBot);
+  $('#rm-state').textContent = msg || { connecting: '接続しています…', found: '対戦相手が見つかりました！' }[state] || '';
+}
+async function rmOpenHub(keepKind) {
+  if (!RM.on && RM.phase !== 'search' && !keepKind) { RM.kind = curKind(); RM.profile = null; }   // 開いたときは、いまの操作方法の部門を見せる（対戦のあとは、同じ部門のまま）
+  show('s-ranked'); rmRenderMe();
+  if (RM.phase !== 'search') rmUI('idle');
+  try {
+    await fbInit(); rmGoOnline(); await rmConnected();
+    if (RM.phase !== 'search') {
+      rmUI('connecting', '前回の対戦を確認しています…');
+      if (await rmSettleAll()) toast('前回の対戦の結果を反映しました');
+      rmUI('idle');
+    }
+    await rmLoadProfile(false); rmRenderMe(); rmLoadBoard();
+  } catch (e) { rmUI('error', '接続できませんでした。通信環境を確認してください'); $('#rm-board').innerHTML = ''; }
+}
+async function rmLoadBoard() {
+  const box = $('#rm-board'); box.innerHTML = '<div class="rk-msg">読み込み中…</div>';
+  try {
+    const snap = await FB.m.get(FB.m.query(dbRef(rkp('ratings')), FB.m.orderByChild('rating'), FB.m.limitToLast(60)));
+    const arr = []; snap.forEach(c => { const v = c.val(); if (v && v.games > 0) arr.push({ id: c.key, name: String(v.name || '').slice(0, 10) || '名無し', rating: +v.rating, wins: +v.wins || 0 }); });
+    arr.sort((a, b) => b.rating - a.rating || b.wins - a.wins);
+    if (!arr.length) { box.innerHTML = '<div class="rk-msg">まだ対戦した人がいません。<br>最初の1人になろう！</div>'; return; }
+    const me = FB.uid, at = arr.findIndex(x => x.id === me);
+    const rows = arr.slice(0, 30).map((x, i) => `<li class="${x.id === me ? 'me' : ''}"><span class="n">${i + 1}</span><span class="nm">${esc(x.name)}</span><span class="tr">${tierOf(x.rating)}</span><span class="tt">${x.rating}</span></li>`);
+    box.innerHTML = `<ul class="rank" style="padding:0;margin:0">${rows.join('')}</ul>` + (at >= 30 ? `<div class="rk-msg" style="padding:10px 0 0">あなたは ${at + 1}位です</div>` : '');
+  } catch (e) { box.innerHTML = '<div class="rk-msg">ランキングを読み込めませんでした</div>'; }
+}
+
+/* --- 相手を探す --- */
+async function rmFind() {
+  if (RM.on || RM.phase === 'search' || RM.phase === 'join') return;
+  Sensor.enable(); sfx.unlock(); RM.showBot = false;
+  // センサー部門は、センサーが動く端末だけ。スライダー部門は、どの端末でも（センサーがある端末も、スライダーで遊ぶ）
+  if (RM.kind === 'sensor' && sliderMode()) { rmUI('error', 'この端末では、センサーが使えません。\nスライダー部門で遊ぶか、設定でセンサーを確認してください'); return; }
+  rmUI('connecting');
+  let p;
+  try {
+    await fbInit(); rmGoOnline(); await rmConnected();
+    p = await rmLoadProfile(true);
+    if (p.inMatch) { await rmSettleLeftover(p); p = await rmLoadProfile(true); toast('前回の対戦の結果を反映しました'); }
+  } catch (e) { rmUI('error', '接続できませんでした。通信環境を確認して、もう一度お試しください'); return; }
+  rmRenderMe();
+  const qp = rkp('queue/' + FB.uid);
+  try { await dbRemove(qp).catch(() => {}); await dbSet(qp, { name: p.name, rating: p.rating, ts: TSV() }); FB.m.onDisconnect(dbRef(qp)).remove(); }
+  catch (e) { RM.phase = 'hub'; rmUI('error', '待ち行列に入れませんでした。もう一度お試しください'); return; }
+  RM.phase = 'search'; RM.t0 = Date.now(); RM.scanning = false;
+  const unsub = FB.m.onValue(dbRef(qp + '/m'), s => { const v = s.val(); if (v && RM.phase === 'search') rmMatched(v); });
+  RM.stopSearch = () => { try { unsub(); } catch (e) {} clearInterval(RM.scanT); clearInterval(RM.tickT); };
+  RM.scanT = setInterval(rmScan, 1500); RM.tickT = setInterval(rmSearchTick, 500);
+  rmSearchTick(); rmScan();
+}
+function rmSearchTick() {
+  if (RM.phase !== 'search') return;
+  const s = Math.floor((Date.now() - RM.t0) / 1000);
+  RM.showBot = s >= 20;
+  rmUI('search', `対戦相手を探しています… ${s}秒` + (s >= 20 ? '\nなかなか見つからないときは、CPUと練習もできます' : ''));
+}
+async function rmScan() {
+  if (RM.phase !== 'search' || RM.scanning) return;
+  RM.scanning = true;
+  try {
+    const snap = await FB.m.get(FB.m.query(dbRef(rkp('queue')), FB.m.orderByChild('ts'), FB.m.limitToFirst(30)));
+    if (RM.phase !== 'search') return;
+    const v = snap.val() || {}, me = FB.uid, now = srvNow(), myR = RM.profile.rating;
+    if (!v[me]) {   // 通信が途切れて、待ち行列から外れていたら、入り直す
+      await dbSet(rkp('queue/' + me), { name: RM.profile.name, rating: myR, ts: TSV() });
+      FB.m.onDisconnect(dbRef(rkp('queue/' + me))).remove();
+    }
+    const myWait = (Date.now() - RM.t0) / 1000;
+    let best = null, bestD = Infinity;
+    for (const [u, q] of Object.entries(v)) {
+      if (u === me || q.m || u > me) continue;   // ふたりが同時に探しているとき、端末番号が大きいほうだけが、組み合わせを決める
+      const age = (now - q.ts) / 1000; if (age > 150) continue;   // 古い（切れている）枠は使わない
+      const win = 100 + Math.floor(Math.max(myWait, age) / 5) * 50, d = Math.abs(q.rating - myR);   // 待つほど、レートの幅が広がる
+      if (d <= win && d < bestD) { best = u; bestD = d; }
+    }
+    if (best) await rmClaim(best);
+  } catch (e) { /* 次の回で、やり直す */ } finally { RM.scanning = false; }
+}
+async function rmClaim(opp) {
+  const me = FB.uid, mid = randHex(16), target = genTarget(1, undefined, 1, seededRng('rm-' + mid));
+  try { await dbSet(rkp(`matches/${mid}/meta`), { a: me, b: opp, players: { [me]: true, [opp]: true }, target, created: TSV() }); } catch (e) { return; }
+  try { await dbSet(rkp(`queue/${opp}/m`), mid); }
+  catch (e) { dbRemove(rkp(`matches/${mid}/meta`)).catch(() => {}); return; }   // 先に、ほかの人に取られた
+  if (RM.phase === 'search') rmMatched(mid);
+}
+function rmCancelSearch(silent) {
+  if (RM.phase !== 'search') return;
+  RM.stopSearch && RM.stopSearch(); RM.phase = 'hub';
+  try { dbRemove(rkp('queue/' + FB.uid)).catch(() => {}); } catch (e) {}
+  if (!silent) rmUI('idle');
+}
+
+/* --- 組み合わせが決まったら --- */
+function rmMatched(mid) {
+  if (RM.phase !== 'search') return;
+  RM.stopSearch && RM.stopSearch();
+  dbRemove(rkp('queue/' + FB.uid)).catch(() => {});
+  Object.assign(RM, { phase: 'join', on: true, bot: false, mid, data: null, ended: false, res: null, opp: null, me: null, waitMsg: '' });
+  rmUI('found');
+  RM.unsub = FB.m.onValue(dbRef(rkp('matches/' + mid)), s => { RM.data = s.val(); rmPump(); });
+  (async () => {   // 自分の参加を書く（p が先、inMatch があと。p があるあいだは、組み合わせを取り消せない）
+    try { await dbSet(rkp(`matches/${mid}/p/${FB.uid}`), { name: RM.profile.name, rating: RM.profile.rating }); await dbUpdate(rkp('ratings/' + FB.uid), { inMatch: mid }); }
+    catch (e) { rmAbort('対戦に入れませんでした。もう一度お試しください'); return; }
+    RM.joinT = setTimeout(() => { if (RM.phase === 'join') rmAbort('相手の準備が間に合いませんでした。もう一度お試しください'); }, 15000);
+    rmPump();
+  })();
+}
+async function rmAbort(msg) {
+  if (RM.ended) return; RM.ended = true; clearTimeout(RM.joinT);
+  try { await dbUpdate(rkp('ratings/' + FB.uid), { inMatch: null }); } catch (e) {}
+  rmCleanup(); show('s-ranked'); rmRenderMe(); rmUI('error', msg);
+}
+function rmBegin() {
+  const d = RM.data, me = FB.uid, opp = d.meta.a === me ? d.meta.b : d.meta.a;
+  RM.me = { uid: me, name: d.p[me].name, rating: d.p[me].rating };
+  RM.opp = { uid: opp, name: d.p[opp].name, rating: d.p[opp].rating };
+  RM.target = d.meta.target;
+  rmStartGame();
+}
+function rmStartBot() {
+  rmCancelSearch(true);
+  const myR = RM.profile ? RM.profile.rating : 1000, t = genTarget(1, undefined, 1);
+  Object.assign(RM, { on: true, bot: true, mid: 'bot', ended: false, res: null, target: t });
+  RM.me = { uid: 'me', name: rmSafeName(), rating: myR };
+  RM.opp = { uid: 'bot', name: RM_BOTS[randInt(0, RM_BOTS.length - 1)], rating: Math.max(200, myR + randInt(-80, 80)) };
+  RM.data = { meta: { target: t }, p: {}, ready: {}, r: {} };
+  rmStartGame();
+}
+function rmStartGame() {
+  clearTimeout(RM.joinT);
+  forceSlider = RM.kind === 'slider';   // スライダー部門は、センサーがある端末でも、画面のスライダーで遊ぶ
+  Net.players = [{ id: 'me', name: RM.me.name }, { id: 'opp', name: RM.opp.name }]; Net.myId = 'me'; Net.isHost = false; Net.rounds = 1;
+  Object.assign(RM, { phase: 'ready', resolving: false, lastLocked: '', waitMsg: '', myLockAt: 0 });
+  onNetMsg({ t: 'start', targets: [RM.target], rounds: 1, blind: false, players: Net.players });
+  sheet(`<div class="sh-verdict">ランクマッチ（${KINDS[RM.kind]}${RM.bot ? '・CPU戦' : ''}）</div>
+    <div class="sh-cmp"><div><small>${esc(RM.me.name)}</small><b>${RM.me.rating}</b></div><div><small>${tierOf(RM.me.rating)} vs ${tierOf(RM.opp.rating)}</small><b>VS</b></div><div><small>${esc(RM.opp.name)}</small><b style="color:var(--ink)">${RM.opp.rating}</b></div></div>
+    <div class="sh-meta">1問勝負。ズレが小さいほうの勝ち！</div>`);
+  clearInterval(RM.watch); RM.watch = setInterval(rmWatch, 1000);
+  setTimeout(rmReady, 2600);
+}
+
+/* --- 対戦の進行（データが変わるたびに、ここで次へ進める） --- */
+function rmReady() {
+  if (RM.ended) return;
+  if (RM.bot) { RM.data.ready.me = Date.now(); setTimeout(() => { if (!RM.ended) { RM.data.ready.bot = Date.now(); rmPump(); } }, randInt(500, 1400)); rmPump(); return; }
+  const put = k => dbSet(rkp(`matches/${RM.mid}/ready/${FB.uid}`), TSV()).catch(() => { if (!RM.ended && k < 4) setTimeout(() => put(k + 1), 700 * (k + 1)); });
+  put(0);
+}
+function rmPump() {
+  const d = RM.data; if (!d || RM.ended) return;
+  if (RM.phase === 'join') { if (!RM.bot && d.meta && d.p && d.p[FB.uid] && Object.keys(d.p).length >= 2) rmBegin(); return; }
+  if (!RM.opp) return;
+  const me = RM.me.uid, o = RM.opp.uid, r = d.r || {}, done = !!(r[me] && r[o]);
+  if (!done && ((d.leave && d.leave[o]) || (d.forfeit && d.forfeit[o]))) { rmFinish('oppLeft'); return; }   // 相手が、先に抜けた
+  if (RM.phase === 'ready') {
+    if (d.ready && d.ready[me] && d.ready[o]) {
+      RM.phase = 'play'; RM.myLockAt = 0;
+      onNetMsg({ t: 'round', n: 0 });
+      if (RM.bot) rmBotSchedule();
+    }
+  } else if (RM.phase === 'play') {
+    const locked = []; if (r[me]) locked.push('me'); if (r[o]) locked.push('opp');
+    const key = locked.join();
+    if (key !== RM.lastLocked) { RM.lastLocked = key; onNetMsg({ t: 'progress', n: 0, locked }); }
+    if (done && !RM.resolving) { RM.resolving = true; setTimeout(rmResolve, Math.max(0, 1100 - (Date.now() - (RM.myLockAt || 0)))); }   // 自分の絵がお辞儀し終わってから、結果を出す
+  }
+}
+function rmLocked() {
+  const a = R.angle, e = R.err; RM.myLockAt = Date.now();
+  if (RM.bot) { RM.data.r.me = { a, e, ts: Date.now() }; rmPump(); return; }
+  const put = k => dbSet(rkp(`matches/${RM.mid}/r/${FB.uid}`), { a, e, ts: TSV() }).catch(() => { if (RM.ended) return; if (k < 3) setTimeout(() => put(k + 1), 800 * (k + 1)); else toast('送信に失敗しました。通信を確認してください'); });
+  put(0);
+}
+function rmBotSchedule() {
+  setTimeout(() => {
+    if (RM.ended || RM.phase !== 'play') return;
+    const t = RM.target, g = (Math.random() + Math.random() + Math.random() - 1.5) * 2;   // だいたい、正規分布
+    const a = r1(clamp(t + g * 9, -105, 125));
+    RM.data.r.bot = { a, e: r1(Math.abs(a - t)), ts: Date.now() }; rmPump();
+  }, randInt(4500, 12000));
+}
+function rmResolve() {
+  if (RM.ended) return;
+  const d = RM.data, me = RM.me.uid, o = RM.opp.uid, r = d.r;
+  RM.phase = 'reveal'; RM.res = { me: r[me], opp: r[o] };
+  const rows = [{ id: 'me', name: RM.me.name, angle: r1(r[me].a), err: r[me].e, total: r[me].e, miss: false }, { id: 'opp', name: RM.opp.name, angle: r1(r[o].a), err: r[o].e, total: r[o].e, miss: false }];
+  onNetMsg({ t: 'result', n: 0, target: RM.target, rows, last: true });
+  RM.revealT = setTimeout(() => rmFinish('done'), 3800);
+}
+// 相手が40秒反応しないとき、残った側が「不戦勝」にできる（サーバーの時刻で、ルールが確かめる）
+function rmWatch() {
+  if (RM.ended || RM.bot || !RM.opp || !RM.data) return;
+  const d = RM.data, me = RM.me.uid, o = RM.opp.uid, r = d.r || {};
+  let since = 0;
+  if (RM.phase === 'ready' && d.ready && d.ready[me] && !d.ready[o]) since = d.ready[me];
+  else if (RM.phase === 'play' && r[me] && !r[o]) since = r[me].ts;
+  if (!since) { RM.waitMsg = ''; return; }
+  const left = Math.ceil((41000 - (srvNow() - since)) / 1000);
+  RM.waitMsg = left > 0 ? `相手の応答を待っています…（あと${left}秒で不戦勝）` : '相手の応答がありません。不戦勝にしています…';
+  if (left <= 0 && !RM.forfeiting) { RM.forfeiting = true; dbSet(rkp(`matches/${RM.mid}/forfeit/${o}`), true).catch(() => { RM.forfeiting = false; }); }
+}
+
+/* --- 結果と、精算 --- */
+async function rmFinish(why) {
+  if (RM.ended) return; RM.ended = true;
+  clearTimeout(RM.revealT); clearInterval(RM.watch); R = null;
+  const d = RM.data, me = RM.me.uid, o = RM.opp.uid, r = d.r || {}, done = !!(r[me] && r[o]);
+  const res = done ? (r[me].e < r[o].e - 0.001 ? 'win' : r[me].e > r[o].e + 0.001 ? 'loss' : 'draw') : 'win';   // 入力がそろっていないのは、相手が抜けたとき
+  if (RM.bot) { rmShowEnd(res, null, why); return; }
+  busy('結果を記録しています…');
+  let out = null;
+  for (let k = 0; k < 4 && !out; k++) { try { out = await rmApply(res, RM.opp.rating, RM.mid); } catch (e) { await new Promise(rs => setTimeout(rs, 800 * (k + 1))); } }
+  idle(); rmShowEnd(res, out, why);
+}
+function rmShowEnd(res, out, why) {
+  const label = res === 'win' ? '勝利！' : res === 'loss' ? '敗北…' : '引き分け';
+  const rs = RM.res || {}, myE = rs.me ? rs.me.e : null, opE = rs.opp ? rs.opp.e : null;
+  let rate = '', note = '';
+  if (RM.bot) rate = 'CPU戦のため、レートは動きません';
+  else if (out && !out.already) {
+    rate = `レート ${out.old} → ${out.rating}（${out.delta > 0 ? '+' : ''}${out.delta}）`;
+    const t0 = tierOf(out.old), t1 = tierOf(out.rating);
+    if (t0 !== t1) note = out.rating > out.old ? `${t0} から ${t1} に昇段！` : `${t0} から ${t1} に降格…`; else note = `称号：${t1}`;
+  } else rate = 'レートの記録に失敗しました（次にランクマッチを開いたとき、反映します）';
+  const lines = rs.me && rs.opp ? `<div class="log"><div><span>お題</span><span>${sg(RM.target)}°</span></div><div><span>あなた</span><span>${sgf(rs.me.a)}°（ズレ ${myE.toFixed(1)}）</span></div><div><span>${esc(RM.opp.name)}</span><span>${sgf(rs.opp.a)}°（ズレ ${opE.toFixed(1)}）</span></div></div>` : '';
+  $('#fi-body').innerHTML = `<div class="fi-title">ランクマッチ（${KINDS[RM.kind]}${RM.bot ? '・CPU戦' : ''}）</div>
+    <div class="fi-big" style="font-size:60px">${label}</div>
+    <div class="fi-title" style="color:var(--gold);font-size:20px">${esc(rate)}</div>
+    ${note ? `<div class="fi-new">${esc(note)}</div>` : ''}
+    ${why === 'oppLeft' ? '<div class="fi-sub">相手が抜けたため、不戦勝です</div>' : ''}
+    ${lines}`;
+  const avg = myE != null ? myE : 10;
+  G.shareText = RM.bot ? `【謝罪道場】ランクマッチの練習で${label}` : `【謝罪道場】ランクマッチ（${KINDS[RM.kind]}）で${label}${out && !out.already ? ` レート${out.rating}（${tierOf(out.rating)}）` : ''}`;
+  G.card = { title: 'ランクマッチ（' + KINDS[RM.kind] + '）', big: label, unit: '', rank: out && !out.already ? tierOf(out.rating) : '', sub: out && !out.already ? `レート ${out.rating}（${out.delta > 0 ? '+' : ''}${out.delta}）` : '', angle: G.lastAngle != null ? G.lastAngle : 45, target: G.lastTarget != null ? G.lastTarget : null, grade: grade(avg), mood: moodOf(avg), dojo: true };
+  $('#fi-rank').hidden = true; $('#fi-rankopen').hidden = true;
+  $('#fi-again').textContent = 'もう一度対戦'; $('#fi-again').hidden = false; $('#fi-again').onclick = () => { show('s-ranked'); rmRenderMe(); rmFind(); };
+  $('#fi-menu').textContent = 'ランクマッチへ'; $('#fi-menu').onclick = () => rmOpenHub(true);
+  rmCleanup(); sheet(null);
+  show('s-final');
+}
+async function rmLeave() {
+  if (!RM.on) return;
+  const d = RM.data || {}, me = RM.me && RM.me.uid, o = RM.opp && RM.opp.uid, r = d.r || {}, done = !!(me && o && r[me] && r[o]);
+  if (!confirm(RM.bot ? 'やめますか？' : done ? '結果が出るまで、あと少しです。やめますか？' : '途中で抜けると、負けになります（レートが下がります）。やめますか？')) return;
+  if (RM.phase === 'join') { rmAbort('対戦をやめました'); return; }
+  if (RM.ended) return;
+  RM.ended = true; clearTimeout(RM.revealT); clearInterval(RM.watch); R = null; sheet(null);
+  if (!RM.bot) {
+    busy('抜けています…');
+    try { if (!done) await dbSet(rkp(`matches/${RM.mid}/leave/${FB.uid}`), true); } catch (e) {}
+    try { await rmApply(done ? (r[me].e < r[o].e - 0.001 ? 'win' : r[me].e > r[o].e + 0.001 ? 'loss' : 'draw') : 'loss', RM.opp.rating, RM.mid); } catch (e) {}
+    idle();
+  }
+  rmCleanup(); show('s-ranked'); rmRenderMe(); rmUI('idle'); rmLoadBoard();
+}
+function rmCleanup() {
+  try { RM.unsub && RM.unsub(); } catch (e) {}
+  RM.unsub = null; clearInterval(RM.watch); clearTimeout(RM.revealT); clearTimeout(RM.joinT);
+  Object.assign(RM, { on: false, bot: false, phase: 'hub', mid: null, data: null, waitMsg: '', forfeiting: false });
+  Net.inGame = false;
+}
+$('#b-ranked').onclick = () => { Sensor.enable(); sfx.unlock(); rmOpenHub(); };
+$('#rm-find').onclick = () => rmFind();
+$('#rm-cancel').onclick = () => rmCancelSearch();
+$('#rm-bot').onclick = () => rmStartBot();
+$$('#rm-kind button').forEach(b => b.onclick = () => rmSetKind(b.dataset.k));
+// 画面が替わったとき：スライダー部門の強制をやめる。待機をやめる。対戦中でなければ、通信を切る（同時に開ける接続の数に、限りがあるため）
+onScreen = id => {
+  if (!RM.on && ['s-menu', 's-solo', 's-rank', 's-ranked', 's-set', 's-online', 's-lobby'].includes(id)) forceSlider = false;
+  if (id !== 's-ranked' && RM.phase === 'search') rmCancelSearch(true);
+  if (id !== 's-ranked' && !RM.on && RM.phase !== 'search' && FB.db) { try { FB.m.goOffline(FB.db); } catch (e) {} }
+};
 
 initAds();
 pushAds('s-menu');
