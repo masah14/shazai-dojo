@@ -645,7 +645,7 @@ if (!S.name) S.name = 'ゲスト' + randInt(10, 99);
 /* ---------- アクセス解析（Google アナリティクス） ---------- */
 // 測定ID（'G-' から始まる）を入れると、有効になる。空のあいだは、何も送らない。
 // URLに ?ga=off を付けて開くと、この端末だけ数えない（運営のテスト用）。?ga=on で、もとに戻る。開発用の localhost も、数えない
-const GA_ID = '';
+const GA_ID = 'G-91YVD44VXH';
 let GA_OFF = false;
 try { const q = new URLSearchParams(location.search).get('ga'); if (q === 'off') localStorage.setItem('shazai-ga', 'off'); if (q === 'on') localStorage.removeItem('shazai-ga'); GA_OFF = localStorage.getItem('shazai-ga') === 'off'; } catch (e) {}
 const GA_ON = !!GA_ID && !GA_OFF && !/^(127\.0\.0\.1|localhost)$/.test(location.hostname);
