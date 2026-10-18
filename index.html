@@ -337,6 +337,7 @@ svg .vsp text{fill:#1b2236;font:700 9.5px var(--sans);text-anchor:middle}
 .doc-tbl td.n span{display:inline-block;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .doc-tbl td.a span{width:3.7em}
 .doc-tbl td.d span{width:3.2em}
+.sgn{display:inline-block;width:.75em;text-align:right}
 .mini-stamp{display:inline-block;font-family:var(--serif);font-weight:700;font-size:11px;line-height:1.5;padding:0 6px;border:1.6px solid #c4152a;color:#c4152a;border-radius:7px;transform:rotate(-6deg);white-space:nowrap}
 .mini-stamp.r-D,.mini-stamp.r-E{color:#5a2a8a;border-color:#5a2a8a}
 .log .lh{opacity:.65;font-size:12px}
@@ -1385,6 +1386,7 @@ if (!window.isSecureContext) $('#slider-note').textContent = 'このページは
 
 /* ---------- 表現 ---------- */
 const sg = v => v < 0 ? '−' + (-v) : String(v);                       // マイナスは「−」で見せる
+const sgSlot = v => `<span class="sgn">${v < 0 ? '−' : ''}</span>${Math.abs(v)}`;   // 表用：マイナスの場所を、あらかじめ空けて、桁をそろえる
 const sgf = v => (v < 0 ? '−' : '') + Math.abs(v).toFixed(1);
 const tname = t => t < 0 ? '仰け反り' : t <= 20 ? '会釈' : t <= 35 ? '敬礼' : t <= 55 ? '最敬礼' : t <= 75 ? '深謝' : '土下座';
 // 1問ごとのハンコと、ひとこと。モードによって、言葉が変わる（ノーミス：完璧／合格／セーフ／アウト、サバイバル：無傷／軽傷／重傷／瀕死、ほか：いつもの6段階）
@@ -1769,14 +1771,14 @@ function finishSolo(over) {
   else if (G.base === 'nomiss') { big = s.cleared; unit = '連続成功'; title = titleNomiss(s.cleared); sub = `ズレ ${fmt(s.param)}° 以内を ${s.cleared} 連続`; }
   else if (G.base === 'score') { big = fmt(s.total); unit = '°'; title = titleAvg(s.avg); sub = `${G.mode === 'daily' ? G.day + '　' : ''}${s.param}回の誤差の合計（平均 ${fmt(s.avg)}°）`; }
   else { big = fmt(s.avg); unit = '° 平均'; title = '練習終了'; sub = `${s.rounds}回　合計 ${fmt(s.total)}°`; }
-  const logs = G.log.map((l, i) => `<div><span>${i + 1}. ${sg(l.target)}°</span><span>${sgf(l.angle)}°（ズレ ${l.err.toFixed(1)}）${miniStamp(l.err)}</span></div>`).join('');
+  const logs = G.log.map((l, i) => `<div><span>${i + 1}. ${sgSlot(l.target)}°</span><span>${sgf(l.angle)}°（ズレ ${l.err.toFixed(1)}）${miniStamp(l.err)}</span></div>`).join('');
   const bigHTML = `<div class="fi-big">${big}${unit === '°' ? '<sup class="deg">°</sup>' : `<small>${unit}</small>`}</div>`;
   const office = G.mode === 'daily';
   $('#s-final').classList.toggle('office', office);
   const streetRes = !!G.street; $('#s-final').classList.toggle('street', streetRes); $('#s-final').style.backgroundImage = streetRes ? streetBg(G.street.scene) : '';
   if (streetRes) {   // サバイバル／ノーミス：道の背景に、評価書
     const lab = title.length > 4 ? [title.slice(0, Math.ceil(title.length / 2)), title.slice(Math.ceil(title.length / 2))] : ['', title];
-    const rows = G.log.map((l, i) => `<tr><td>${i + 1}. ${sg(l.target)}°</td><td class="n a"><span>${sgf(l.angle)}°</span></td><td class="n d"><span>${l.err.toFixed(1)}°</span></td><td>${miniStamp(l.err)}</td></tr>`).join('');
+    const rows = G.log.map((l, i) => `<tr><td>${i + 1}. ${sgSlot(l.target)}°</td><td class="n a"><span>${sgf(l.angle)}°</span></td><td class="n d"><span>${l.err.toFixed(1)}°</span></td><td>${miniStamp(l.err)}</td></tr>`).join('');
     const trailTxt = G.base === 'nomiss' && s.cleared > 0 ? `昇進：${trailOf(s.cleared)}` : '';
     $('#fi-body').innerHTML = `<div class="doc">
       <div class="doc-head"><b>謝罪道場</b><span>${esc(MODE[G.mode].name)}</span></div>
@@ -1787,7 +1789,7 @@ function finishSolo(over) {
       <table class="doc-tbl"><thead><tr><th>お題の角度</th><th class="n">あなたの角度</th><th class="n">ズレ</th><th>判定</th></tr></thead><tbody>${rows || '<tr><td colspan="4">記録なし</td></tr>'}</tbody></table>
     </div>`;
   } else if (office) {   // 本番謝罪：会社の「評価書」
-    const rows = G.log.map((l, i) => `<tr><td>${i + 1}. ${sg(l.target)}°</td><td class="n a"><span>${sgf(l.angle)}°</span></td><td class="n d"><span>${l.err.toFixed(1)}°</span></td><td>${miniStamp(l.err)}</td></tr>`).join('');
+    const rows = G.log.map((l, i) => `<tr><td>${i + 1}. ${sgSlot(l.target)}°</td><td class="n a"><span>${sgf(l.angle)}°</span></td><td class="n d"><span>${l.err.toFixed(1)}°</span></td><td>${miniStamp(l.err)}</td></tr>`).join('');
     $('#fi-body').innerHTML = `<div class="doc">
       <div class="doc-head"><b>謝罪道場</b><span>誠意評価書</span></div>
       <div class="doc-meta"><span>1日1回限り　本番謝罪　${esc(G.day)}</span><span>${esc(S.name)} 様</span></div>
