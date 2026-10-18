@@ -2033,7 +2033,7 @@ async function rankFetch(day, kind) {
   const r = await fetch(`${RANK.url}/ranking/${day}/${kind}.json?orderBy=%22total%22&limitToFirst=${RANK_N}`, { cache: 'no-store' });
   if (!r.ok) throw new Error('rank ' + r.status);
   const j = (await r.json()) || {};
-  return Object.entries(j).filter(([id]) => !RANK_HIDE.includes(id)).map(([id, v]) => ({ id, name: cleanName(String((v && v.name) || '').slice(0, 10) || '名無し'), total: +(v && v.total), ts: +(v && v.ts) || 0 }))
+  return Object.entries(j).filter(([id]) => !RANK_HIDE.includes(id)).map(([id, v]) => ({ id, name: id === myUid() ? cleanName(S.name, 'ゲスト') : cleanName(String((v && v.name) || '').slice(0, 10) || '名無し'), total: +(v && v.total), ts: +(v && v.ts) || 0 }))
     .filter(x => isFinite(x.total)).sort((a, b) => a.total - b.total || a.ts - b.ts);
 }
 function rankRow(x, i, me) { return `<li class="${me ? 'me' : ''}"><span class="n">${i + 1}</span><span class="nm">${esc(x.name)}</span><span class="tt">${fmt(r1(x.total))}°</span></li>`; }
@@ -2448,6 +2448,8 @@ async function rmLoadProfile(create, k = RM.kind) {
   let p = await dbGet(path);
   if (!p && create) { await dbSet(path, { name, rating: 1000, games: 0, wins: 0, losses: 0, draws: 0, ts: TSV() }); p = await dbGet(path); }
   else if (p && p.name !== name && !p.inMatch) { await dbUpdate(path, { name }); p.name = name; }
+  const other = k === 'sensor' ? 'slider' : 'sensor';   // 名前を変えたら、もう一方の部門の記録の名前も、変える
+  try { const po = await dbGet(rkp('ratings/' + FB.uid, other)); if (po && po.name !== name && !po.inMatch) await dbUpdate(rkp('ratings/' + FB.uid, other), { name }); } catch (e) {}
   if (k === RM.kind) RM.profile = p || null;
   rmCache(p, k);
   return p;
@@ -2529,7 +2531,7 @@ async function rmLoadBoard() {
   const box = $('#rm-board'); box.innerHTML = '<div class="rk-msg">読み込み中…</div>';
   try {
     const snap = await FB.m.get(FB.m.query(dbRef(rkp('ratings')), FB.m.orderByChild('rating'), FB.m.limitToLast(60)));
-    const arr = []; snap.forEach(c => { const v = c.val(); if (v && v.games > 0) arr.push({ id: c.key, name: cleanName(String(v.name || '').slice(0, 10) || '名無し'), rating: +v.rating, wins: +v.wins || 0 }); });
+    const arr = []; snap.forEach(c => { const v = c.val(); if (v && v.games > 0) arr.push({ id: c.key, name: c.key === FB.uid ? rmSafeName() : cleanName(String(v.name || '').slice(0, 10) || '名無し'), rating: +v.rating, wins: +v.wins || 0 }); });
     arr.sort((a, b) => b.rating - a.rating || b.wins - a.wins);
     if (!arr.length) { box.innerHTML = '<div class="rk-msg">まだ対戦した人がいません。<br>最初の1人になろう！</div>'; return; }
     const me = FB.uid, at = arr.findIndex(x => x.id === me);
