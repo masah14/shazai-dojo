@@ -578,6 +578,15 @@ try {
 } catch (e) {}
 if (!S.name) S.name = 'ゲスト' + randInt(10, 99);
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+// テスト用：URL に ?testreset=1 を付けて開くと、今日の挑戦ずみの記録と、ランキング用の端末番号だけを作り直す
+// （名前・設定・ランクマッチのレートは、そのまま。サーバーに残った前の記録は、別の端末のものとして残る）
+let testResetDone = false;
+try {
+  if (new URLSearchParams(location.search).get('testreset') === '1') {
+    delete S.dailyRecs; delete S.dailyTops; delete S.uid; save(); testResetDone = true;
+    history.replaceState(null, '', location.pathname + location.hash);
+  }
+} catch (e) {}
 
 /* ---------- 定数 ---------- */
 const ONLINE_LIMIT = 25000;
@@ -2164,6 +2173,7 @@ onScreen = id => {
 initAds();
 pushAds('s-menu');
 updateMenu();
+if (testResetDone) toast('テスト用：今日の挑戦ずみの記録を、消しました');
 
 /* ---------- 招待リンクで来たとき ---------- */
 (() => {
