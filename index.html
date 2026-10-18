@@ -789,7 +789,7 @@ function human(o) {
 }
 const hairShort = (col, ext = 0) => ({ R, hy }) => PP(`M${-R - 1} ${hy + 3} A${R + 1} ${R + 1} 0 0 1 ${R + 1} ${hy + 3} Q${R * .5} ${hy - R * .45 + ext} 0 ${hy - R * .4 + ext} Q${-R * .5} ${hy - R * .45 + ext} ${-R - 1} ${hy + 3}Z`, col);
 
-const KARA = `<pattern id="kara" width="16" height="16" patternUnits="userSpaceOnUse"><rect width="16" height="16" fill="#2f7a43"/><path d="M8 8 m-1 0 a1 1 0 1 1 2 0 a2.6 2.6 0 1 1 -5.2 0 a4.2 4.2 0 1 1 8.4 0 a5.8 5.8 0 1 1 -11.6 0" fill="none" stroke="#a9dcb4" stroke-width="1.4"/></pattern>`;
+const KARA = `<pattern id="kara" width="16" height="16" patternUnits="userSpaceOnUse"><rect width="16" height="16" fill="#2f7a43"/><path d="M8 8 m-1 0 a1 1 0 1 1 2 0 a2.6 2.6 0 1 1 -5.2 0 a4.2 4.2 0 1 1 8.4 0 a5.8 5.8 0 1 1 -11.6 0" fill="none" stroke="#a9dcb4" stroke-width="1.4"/></pattern><linearGradient id="gfade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f3f1ea" stop-opacity=".96"/><stop offset=".6" stop-color="#f3f1ea" stop-opacity=".5"/><stop offset="1" stop-color="#f3f1ea" stop-opacity="0"/></linearGradient>`;
 const CHARS = {
   /* ---- 普通の人（序盤）---- */
   oji: (m = 'wait') => human({ mood: m, pants: '#6b5a48', top: '#6f9460', topDeco: ({ bt }) => PP(`M-6 ${bt} L0 ${bt + 14} L6 ${bt}Z`, '#f6f1e7'), shoes: '#4a3a2a',
@@ -869,9 +869,26 @@ const CHARS = {
     + C(0, -62, 6, '#e9b44c') + SS('M-18 -62 h36', '#9aa5b5', 1.6)
     + SS('M-8 -118 L-14 -140 M8 -118 L14 -140', '#8fd16a', 3) + C(-14, -142, 4.6, '#f6e07a') + C(14, -142, 4.6, '#f6e07a')
     + E(0, -100, 24, 26, '#8fd16a') + E(-10, -100, 8, 11, '#1a2a1a', 'transform="rotate(18 -10 -100)"') + E(10, -100, 8, 11, '#1a2a1a', 'transform="rotate(-18 10 -100)"') + C(-12, -103, 2, '#fff') + C(8, -103, 2, '#fff') + SS('M-5 -84 q5 4 10 0', '#2a5a2a', 1.8),
-  ghost: () => E(0, 0, 22, 4, 'rgba(0,0,0,.14)') + `<g opacity=".93">` + PP('M-28 -22 Q-28 -118 0 -118 Q28 -118 28 -22 L28 -10 Q22 -20 16 -10 Q10 -20 4 -10 Q-2 -20 -8 -10 Q-14 -20 -20 -10 Q-26 -20 -28 -10Z', '#f4f6fb')
-    + PP('M-26 -62 Q-44 -74 -38 -90 Q-30 -76 -24 -72Z', '#f4f6fb') + PP('M26 -62 Q44 -74 38 -90 Q30 -76 24 -72Z', '#f4f6fb') + `</g>`
-    + E(-9, -78, 4.4, 7, '#2a2a3a') + E(9, -78, 4.4, 7, '#2a2a3a') + E(0, -60, 5, 7.5, '#2a2a3a') + blush(-76, 22) + C(30, -102, 3.2, '#9fd4ff') + PP('M30 -108 q3 5 0 9 q-3 -4 0 -9Z', '#9fd4ff'),
+  /* 幽霊：長い黒髪、白装束、足がなく下半身がすっと消える。人魂つき */
+  ghost: (m = 'wait') => {
+    const W = '#f3f1ea', FACE = '#dfe6ee', HAIR = '#17171f';
+    const arm = d => SS(`M${d * 27} -142 Q${d * 47} -122 ${d * 39} -101`, W, 12) + E(d * 37, -92, 7, 10.5, FACE) + SS(`M${d * 33} -85 l-1 8 M${d * 37} -83 l0 9 M${d * 41} -85 l1 8`, FACE, 2.4);
+    const flame = (x, y, k) => PP(`M${x} ${y} Q${x - 11 * k} ${y - 16 * k} ${x} ${y - 36 * k} Q${x + 11 * k} ${y - 16 * k} ${x} ${y}Z`, '#8fd0ff', 'opacity=".85"') + PP(`M${x} ${y - 3 * k} Q${x - 5 * k} ${y - 14 * k} ${x} ${y - 24 * k} Q${x + 5 * k} ${y - 14 * k} ${x} ${y - 3 * k}Z`, '#e8f8ff') + C(x, y - 14 * k, 17 * k, '#8fd0ff', 'opacity=".16"');
+    const mouth = m === 'happy' ? SS('M-6 -156 Q0 -150 6 -156', '#6b2a3a', 1.8) : m === 'angry' ? E(0, -155, 4, 5.4, '#2a0e16') : SS('M-5 -156 q5 3 10 0', '#6b2a3a', 1.8);
+    return flame(-54, -108, 1) + flame(58, -64, .7)
+      + `<g opacity=".95">`
+      + PP('M-27 -176 Q-39 -130 -33 -92 Q-22 -100 -18 -96 L18 -96 Q22 -100 33 -92 Q39 -130 27 -176Z', HAIR)
+      + PP('M-27 -84 L27 -84 Q31 -40 15 -14 Q0 6 -15 -14 Q-31 -40 -27 -84Z', 'url(#gfade)') + PP('M-14 -40 Q-24 -20 -8 0 Q-12 -22 -6 -40Z', 'url(#gfade)', 'opacity=".7"') + PP('M14 -40 Q24 -22 9 -2 Q12 -22 6 -40Z', 'url(#gfade)', 'opacity=".7"')
+      + RC(-27, -152, 54, 74, 18, W) + SS('M-13 -150 L3 -114 M13 -150 L-3 -114', '#cdc8b8', 2.2) + RC(-27, -112, 54, 7, 0, '#d9d4c4')
+      + arm(-1) + arm(1)
+      + PP('M-24 -170 Q-35 -134 -29 -94 Q-21 -106 -16 -100 Q-22 -136 -16 -168Z', HAIR) + PP('M24 -170 Q35 -134 29 -94 Q21 -106 16 -100 Q22 -136 16 -168Z', HAIR)
+      + E(-21, -168, 3, 5, FACE) + E(21, -168, 3, 5, FACE) + C(0, -170, 21, FACE) + C(0, -170, 21, 'rgba(90,100,140,.14)')
+      + E(-8, -168, 5.6, 7.4, 'rgba(40,40,70,.42)') + E(8, -168, 5.6, 7.4, 'rgba(40,40,70,.42)') + E(-8, -168, 3.2, 4.8, '#0e0e16') + E(8, -168, 3.2, 4.8, '#0e0e16') + C(-9, -170, .9, '#fff') + C(7, -170, .9, '#fff')
+      + SS('M0 -166 v5', '#b8c2d2', 1.4) + mouth
+      + PP('M-22 -176 Q-18 -195 0 -195 Q18 -195 22 -176 Q13 -187 7 -170 Q4 -183 -2 -172 Q-8 -185 -14 -168 Q-18 -176 -22 -176Z', HAIR) + PP('M2 -187 Q11 -176 9 -157 Q5 -170 0 -181Z', HAIR)
+      + PP('M-5 -192 L5 -192 L0 -180Z', '#f6f6f6', 'stroke="#aaa" stroke-width=".8"')
+      + `</g>`;
+  },
   penguin: () => shadow(26) + E(-9, -3, 9, 4.5, '#f2994a') + E(9, -3, 9, 4.5, '#f2994a') + E(0, -44, 25, 42, '#23283a') + E(0, -40, 17, 33, '#f6f1e7')
     + PP('M-24 -56 Q-40 -40 -30 -26 Q-26 -40 -22 -46Z', '#23283a') + PP('M24 -56 Q40 -40 30 -26 Q26 -40 22 -46Z', '#23283a')
     + C(0, -84, 19, '#23283a') + E(0, -80, 12, 12, '#f6f1e7') + C(-6, -84, 2.4, '#2a2020') + C(6, -84, 2.4, '#2a2020') + PP('M-5 -78 h10 l-5 7Z', '#f2994a'),
@@ -880,7 +897,7 @@ const CHARS = {
     + C(-17, -90, 8, '#2a2a30') + C(17, -90, 8, '#2a2a30') + C(0, -76, 22, '#f6f6f6') + E(-9, -76, 6, 8, '#2a2a30', 'transform="rotate(20 -9 -76)"') + E(9, -76, 6, 8, '#2a2a30', 'transform="rotate(-20 9 -76)"')
     + C(-9, -76, 2, '#fff') + C(9, -76, 2, '#fff') + E(0, -68, 4.4, 3.2, '#2a2a30') + SS('M-4 -62 q4 4 8 0', '#2a2a30', 1.6),
 };
-const SCALE = { oji: .97, oba: .93, onii: 1, onee: .98, boy: 1.05, girl: 1.05, dog: 1.25, cat: 1.25, penguin: 1.2, panda: 1.1, baby: 1.15, thief: 1, ninja: 1, santa: 1.05, alien: 1.1, ghost: 1.2 };
+const SCALE = { oji: .97, oba: .93, onii: 1, onee: .98, boy: 1.05, girl: 1.05, dog: 1.25, cat: 1.25, penguin: 1.2, panda: 1.65, baby: 1.15, thief: 1, ninja: 1, santa: 1.05, alien: 1.1, ghost: 1 };
 const charSVG = k => `<g transform="scale(${SCALE[k] || 1})">${CHARS[k]()}</g>`;
 const GROUPS = {
   normal: [['oji', 'おじいちゃん'], ['oba', 'おばあちゃん'], ['onii', 'おにいさん'], ['onee', 'おねえさん'], ['boy', '男の子'], ['girl', '女の子']],
@@ -891,7 +908,7 @@ const GROUPS = {
 const sceneShopping = () => {
   let s = `<rect x="-600" y="-600" width="1500" height="832" fill="#ece0c8"/>`;
   for (let x = -330; x < 640; x += 66) s += RC(x, 14, 34, 36, 2, '#a9c9db') + RC(x - 2, 12, 38, 4, 1, '#8a7a62') + SS(`M${x + 17} 14 V50`, '#f4efe4', 2);
-  const shops = [['八百屋', '#c9392b', '#fff3d6'], ['ラーメン', '#2f6aa8', '#ffe9c8'], ['お弁当', '#2f8a5a', '#fff3d6'], ['豆腐店', '#c9392b', '#e8f1f6'], ['肉のサトウ', '#2f6aa8', '#fff3d6']];
+  const shops = [['', '#c9392b', '#fff3d6'], ['', '#2f6aa8', '#ffe9c8'], ['', '#2f8a5a', '#fff3d6'], ['', '#c9392b', '#e8f1f6'], ['', '#2f6aa8', '#fff3d6']];
   for (let i = -3; i < 6; i++) {
     const x0 = i * 112 - 6, sh = shops[((i % 5) + 5) % 5];
     s += RC(x0, 80, 112, 142, 0, '#d9cbb0') + RC(x0 + 12, 118, 88, 82, 3, sh[2]) + RC(x0 + 12, 118, 88, 4, 0, '#8a7a62') + RC(x0 + 20, 200, 72, 22, 0, '#a58b66');
