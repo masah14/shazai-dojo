@@ -632,6 +632,28 @@ try {
   if (S.rm && S.rm.rating != null) delete S.rm;
 } catch (e) {}
 if (!S.name) S.name = 'ゲスト' + randInt(10, 99);
+/* ---------- 名前の禁止ワード ---------- */
+// 全角・半角、カタカナ・ひらがな、すき間の記号、数字での言い換え（1→i など）をそろえて調べる。使えない名前は、入力できず、画面でも「＊＊＊」で隠す
+const nameKey = s => String(s).normalize('NFKC').toLowerCase().replace(/[\u30a1-\u30f6]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60)).replace(/[^\p{L}\p{N}]/gu, '');
+const nameLeet = s => nameKey(String(s).normalize('NFKC').toLowerCase().replace(/0/g, 'o').replace(/[1!|]/g, 'i').replace(/3/g, 'e').replace(/[4@]/g, 'a').replace(/[5$]/g, 's').replace(/7/g, 't'));
+const NG_WORDS = [
+  // 暴言・自傷
+  '死ね', 'しねよ', '死んでしまえ', 'くたばれ', '消えろ', '殺す', 'ころす', '殺せ', 'ころせ', '殺してやる', 'ぶっ殺', '自殺', 'じさつ',
+  // 差別・侮辱
+  'きちがい', '気違い', 'ガイジ', '池沼', 'かたわ', 'めくら', 'つんぼ', '支那', 'ジャップ', 'おかま', 'nigger', 'nigga', 'faggot', 'retard', 'chink', 'tranny',
+  // 性的
+  'ちんこ', 'ちんぽ', 'ちんちん', 'まんこ', 'おっぱい', 'セックス', 'オナニー', 'レイプ', '強姦', '痴漢', 'きんたま', 'しこしこ', 'フェラ', 'パイズリ', 'ビッチ', 'やりまん', 'ポルノ', 'porn', 'fuck', 'ふぁっく', 'dick', 'pussy', 'cunt', 'bitch', 'whore', 'slut', 'rapist',
+  // 運営へのなりすまし
+  '運営', 'うんえい', '管理人', 'かんりにん', '公式', 'admin', 'official', 'shazaidojo',
+].map(nameKey);
+const NG_EXACT = ['しね'];   // 「シネマ」などをまきこまないよう、これだけは、ぴったり一致のときだけ
+const NG_PAT = /https?:|www\.|\.(com|net|jp|org|io|me)\b|@|\d{9,}/;   // URL、メールアドレス、電話番号のような数字
+const badName = s => {
+  const raw = String(s).normalize('NFKC').toLowerCase(), a = nameKey(raw), b = nameLeet(raw);
+  return NG_PAT.test(raw) || NG_EXACT.includes(a) || NG_WORDS.some(w => w && (a.includes(w) || b.includes(w)));
+};
+const cleanName = (s, fallback) => badName(s) ? (fallback || '＊＊＊') : s;
+if (badName(S.name)) S.name = 'ゲスト' + randInt(10, 99);
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
 // テスト用：URL に ?testreset=1 を付けて開くと、今日の挑戦ずみの記録と、ランキング用の端末番号だけを作り直す
 // （名前・設定・ランクマッチのレートは、そのまま。サーバーに残った前の記録は、別の端末のものとして残る）
@@ -1487,7 +1509,11 @@ function stepper(el, o) {
 /* ---------- メニュー ---------- */
 const inName = $('#in-name');
 inName.value = S.name;
-inName.addEventListener('input', () => { S.name = inName.value.trim().slice(0, 10) || 'ゲスト'; save(); });
+inName.addEventListener('input', () => {
+  const v = inName.value.trim().slice(0, 10);
+  S.name = badName(v) ? (S.guestName = S.guestName || 'ゲスト' + randInt(10, 99)) : (v || 'ゲスト'); save();
+});
+inName.addEventListener('change', () => { if (badName(inName.value)) { toast('その名前は使えません'); inName.value = S.name; } });
 $('#b-daily').onclick = () => { Sensor.enable(); sfx.unlock(); startSolo('daily'); };
 $('#b-solo').onclick = () => { Sensor.enable(); sfx.unlock(); buildSolo(); show('s-solo'); };
 // 本番謝罪の記録は、部門（sensor / slider）ごとに持つ。途中でやめても、続きから再開できる。
@@ -1929,7 +1955,7 @@ const KIND_NOTE = { sensor: 'スマホを傾けて遊んだ人のランキング
 // 登録できたら true。すでに登録済み（書き換え禁止）なら 'exists'。つながらなければ false
 async function rankSubmit(day, kind, total, avg) {
   try {
-    const r = await fetch(`${RANK.url}/ranking/${day}/${kind}/${myUid()}.json`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: S.name, total, avg, ts: Date.now() }) });
+    const r = await fetch(`${RANK.url}/ranking/${day}/${kind}/${myUid()}.json`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: cleanName(S.name, 'ゲスト'), total, avg, ts: Date.now() }) });
     return r.ok ? true : (r.status === 401 || r.status === 403 ? 'exists' : false);
   } catch (e) { return false; }
 }
@@ -1939,7 +1965,7 @@ async function rankFetch(day, kind) {
   const r = await fetch(`${RANK.url}/ranking/${day}/${kind}.json?orderBy=%22total%22&limitToFirst=${RANK_N}`, { cache: 'no-store' });
   if (!r.ok) throw new Error('rank ' + r.status);
   const j = (await r.json()) || {};
-  return Object.entries(j).filter(([id]) => !RANK_HIDE.includes(id)).map(([id, v]) => ({ id, name: String((v && v.name) || '').slice(0, 10) || '名無し', total: +(v && v.total), ts: +(v && v.ts) || 0 }))
+  return Object.entries(j).filter(([id]) => !RANK_HIDE.includes(id)).map(([id, v]) => ({ id, name: cleanName(String((v && v.name) || '').slice(0, 10) || '名無し'), total: +(v && v.total), ts: +(v && v.ts) || 0 }))
     .filter(x => isFinite(x.total)).sort((a, b) => a.total - b.total || a.ts - b.ts);
 }
 function rankRow(x, i, me) { return `<li class="${me ? 'me' : ''}"><span class="n">${i + 1}</span><span class="nm">${esc(x.name)}</span><span class="tt">${fmt(r1(x.total))}°</span></li>`; }
@@ -2104,7 +2130,7 @@ function hostOnMsg(conn, m) {
     if (Net.inGame) { conn.send({ t: 'reject', why: 'ゲーム中です。終わるまで少し待ってください' }); setTimeout(() => conn.close(), 400); return; }
     if (Net.players.length >= 8) { conn.send({ t: 'reject', why: '満員です（最大8人）' }); setTimeout(() => conn.close(), 400); return; }
     if (conn._pid) return;
-    const id = 'p' + (++Net.seq), name = uniqueName(String(m.name || '').slice(0, 10));
+    const id = 'p' + (++Net.seq), name = uniqueName(cleanName(String(m.name || '').slice(0, 10), 'ゲスト'));
     conn._pid = id; Net.conns.set(id, { conn, id });
     Net.players.push({ id, name });
     conn.send({ t: 'welcome', id });
@@ -2306,12 +2332,11 @@ const RM = { on: false, bot: false, phase: 'idle', kind: 'sensor', mid: null, da
 const rkp = (p, k) => 'rk/' + (k || RM.kind) + '/' + p;
 const RM_KIND_NOTE = { sensor: 'スマホを傾けて遊ぶ部門です。', slider: '画面のスライダーで遊ぶ部門です（パソコンでも遊べます）。' };
 const RM_K = 24;   // 1回の勝ち負けで動くレートの大きさ（最大でも、サーバーのルールの上限32の内側）
-const RM_NG = ['死ね', 'しね', '殺す', 'ころす', 'ちんこ', 'まんこ', 'レイプ', 'ガイジ', '池沼'];   // 最低限の言葉。ほかは、運営がコンソールから消す
 const RM_TIERS = [[0, '見習い'], [900, '会釈'], [1050, '敬礼'], [1200, '最敬礼'], [1350, '深謝'], [1500, '土下座']];
 const RM_BOTS = ['道場生ゴロー', '師範代ハナ', '見習いタロウ', '先輩ケンジ', '新人ミサキ'];
 const randHex = n => Array.from(crypto.getRandomValues(new Uint8Array(n / 2)), b => b.toString(16).padStart(2, '0')).join('');
 function tierOf(r) { let t = RM_TIERS[0][1]; for (const [v, n] of RM_TIERS) if (r >= v) t = n; return t; }
-const rmSafeName = () => { const n = String(S.name || '').trim().slice(0, 10) || 'ゲスト'; return RM_NG.some(w => n.includes(w)) ? 'ゲスト' + randInt(10, 99) : n; };
+const rmSafeName = () => { const n = String(S.name || '').trim().slice(0, 10) || 'ゲスト'; return badName(n) ? 'ゲスト' + randInt(10, 99) : n; };
 // 勝ちなら必ず+1以上、負けなら必ず-1以下、引き分けは0（サーバーのルールと同じ決まり）
 function rmDelta(me, opp, res) {
   if (res === 'draw') return 0;
@@ -2436,7 +2461,7 @@ async function rmLoadBoard() {
   const box = $('#rm-board'); box.innerHTML = '<div class="rk-msg">読み込み中…</div>';
   try {
     const snap = await FB.m.get(FB.m.query(dbRef(rkp('ratings')), FB.m.orderByChild('rating'), FB.m.limitToLast(60)));
-    const arr = []; snap.forEach(c => { const v = c.val(); if (v && v.games > 0) arr.push({ id: c.key, name: String(v.name || '').slice(0, 10) || '名無し', rating: +v.rating, wins: +v.wins || 0 }); });
+    const arr = []; snap.forEach(c => { const v = c.val(); if (v && v.games > 0) arr.push({ id: c.key, name: cleanName(String(v.name || '').slice(0, 10) || '名無し'), rating: +v.rating, wins: +v.wins || 0 }); });
     arr.sort((a, b) => b.rating - a.rating || b.wins - a.wins);
     if (!arr.length) { box.innerHTML = '<div class="rk-msg">まだ対戦した人がいません。<br>最初の1人になろう！</div>'; return; }
     const me = FB.uid, at = arr.findIndex(x => x.id === me);
@@ -2532,8 +2557,8 @@ async function rmAbort(msg) {
 }
 function rmBegin() {
   const d = RM.data, me = FB.uid, opp = d.meta.a === me ? d.meta.b : d.meta.a;
-  RM.me = { uid: me, name: d.p[me].name, rating: d.p[me].rating };
-  RM.opp = { uid: opp, name: d.p[opp].name, rating: d.p[opp].rating };
+  RM.me = { uid: me, name: cleanName(d.p[me].name), rating: d.p[me].rating };
+  RM.opp = { uid: opp, name: cleanName(d.p[opp].name), rating: d.p[opp].rating };
   RM.target = d.meta.target;
   rmStartGame();
 }
