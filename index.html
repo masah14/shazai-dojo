@@ -1418,11 +1418,13 @@ async function rankSubmit(day, kind, total, avg) {
     return r.ok ? true : (r.status === 401 || r.status === 403 ? 'exists' : false);
   } catch (e) { return false; }
 }
+// 表示しない端末番号（テストの記録）。データは消さずに、一覧から外すだけ
+const RANK_HIDE = ['96a9c33501fd5ee6ab09'];
 async function rankFetch(day, kind) {
   const r = await fetch(`${RANK.url}/ranking/${day}/${kind}.json?orderBy=%22total%22&limitToFirst=${RANK_N}`, { cache: 'no-store' });
   if (!r.ok) throw new Error('rank ' + r.status);
   const j = (await r.json()) || {};
-  return Object.entries(j).map(([id, v]) => ({ id, name: String((v && v.name) || '').slice(0, 10) || '名無し', total: +(v && v.total), ts: +(v && v.ts) || 0 }))
+  return Object.entries(j).filter(([id]) => !RANK_HIDE.includes(id)).map(([id, v]) => ({ id, name: String((v && v.name) || '').slice(0, 10) || '名無し', total: +(v && v.total), ts: +(v && v.ts) || 0 }))
     .filter(x => isFinite(x.total)).sort((a, b) => a.total - b.total || a.ts - b.ts);
 }
 function rankRow(x, i, me) { return `<li class="${me ? 'me' : ''}"><span class="n">${i + 1}</span><span class="nm">${esc(x.name)}</span><span class="tt">${fmt(r1(x.total))}°</span></li>`; }
