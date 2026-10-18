@@ -652,7 +652,7 @@ const MODES = [
   { key: 'daily', name: '1日1回限り　本番謝罪', desc: '今日は全員が同じ5問。誤差の合計で、順位がつきます。' },
   { key: 'practice', name: '練習', desc: 'ゆっくり練習。このモードは終わりがありません。' },
   { key: 'survival', name: 'サバイバル', desc: 'HPは50。ズレたぶんだけ減っていき、0になったらアウト。何ステージ突破できる？', fixed: true },
-  { key: 'nomiss', name: 'ノーミス', desc: 'ズレが10°を超えたらアウト。1回成功するごとに、称号が上がっていく。何連続で決められる？', fixed: true },
+  { key: 'nomiss', name: 'ノーミス', desc: 'ズレが10°を超えたらアウト。成功を重ねるほど、称号が上がっていく。何連続で決められる？', fixed: true },
   { key: 'score', name: 'スコアアタック', desc: '5回の誤差の合計で勝負。少ないほど立派。', fixed: true },
 ];
 const MODE = Object.fromEntries(MODES.map(m => [m.key, m]));
@@ -1277,10 +1277,10 @@ const GRADES = [[0.5, 'S', '完璧'], [1.5, 'A', '合格'], [3, 'B', '許す'], 
 const grade = e => { const g = GRADES.find(x => e <= x[0]); return { rank: g[1], label: g[2] }; };
 const stampHTML = e => { const g = grade(e); return `<div class="stamp r-${g.rank}"><span>${g.label}</span></div>`; };
 const scene = t => t < 0 ? 'もはや謝罪ではない' : t <= 12 ? '軽く会釈' : t <= 20 ? 'すれ違いのご挨拶' : t <= 28 ? 'お客様のお出迎え' : t <= 36 ? 'ちょっとした遅刻のお詫び' : t <= 46 ? 'ミスをしたときのお詫び' : t <= 56 ? '取引先への正式なお詫び' : t <= 66 ? '会社を揺るがすミス' : t <= 76 ? '世間を騒がせてしまった' : t <= 84 ? '社長と並んで謝罪会見' : 'もう土下座しかない';
-// ノーミス：論外から始まり、1回成功するごとに、称号が1つ上がる（謝罪の神様まで）
-const LADDER = ['論外', '能無し', '半人前', '謝罪の凡才', '謝罪の秀才', '謝罪の逸材', '謝罪の天才', '謝罪の神様'];
-const titleNomiss = n => LADDER[Math.min(Math.max(n, 0), LADDER.length - 1)];
-const trailOf = n => { const top = Math.min(n, LADDER.length - 1), from = Math.max(0, top - 3); return (from > 0 ? '… → ' : '') + LADDER.slice(from, top + 1).map(esc).join(' → '); };   // 上がってきた称号（最後の4つ）
+// ノーミスの称号：成功した回数で決まる。[この回数から, 称号]
+const NOMISS_TITLES = [[0, '論外'], [1, '謝罪の凡才'], [4, '謝罪の秀才'], [6, '謝罪の逸材'], [8, '謝罪の天才'], [10, '謝罪の神様']];
+const titleNomiss = n => NOMISS_TITLES.filter(x => n >= x[0]).pop()[1];
+const trailOf = n => { const t = NOMISS_TITLES.filter(x => n >= x[0]).map(x => esc(x[1])); return (t.length > 4 ? '… → ' : '') + t.slice(-4).join(' → '); };   // 上がってきた称号（最後の4つ）
 const titleN = n => n >= 20 ? '謝罪会見の達人' : n >= 15 ? '部長クラス' : n >= 10 ? '中堅社員' : n >= 6 ? '新入社員' : n >= 3 ? '要研修' : '出禁';
 // 称号とハンコ：誤差の合計（5問の合計。問の数がちがうときは、平均×5）で決める。[上限, 前につく言葉, 称号]
 const TITLES = [[5, '謝罪の', '神様'], [10, '謝罪の', '天才'], [20, '謝罪の', '逸材'], [30, '謝罪の', '秀才'], [50, '謝罪の', '凡才'], [70, '', '半人前'], [90, '', '能無し'], [120, '', '論外'], [Infinity, '', '出禁']];
@@ -1606,7 +1606,11 @@ function soloLocked() {
   if (G.base === 'survival') { const hp = Math.max(0, r1(G.param - G.total)); totalLine = hp <= 0 ? 'HPが0になりました' : `HP ${fmt(hp)} / ${G.param}${err > 0 ? `（−${err.toFixed(1)}）` : '（減りませんでした）'}`; }
   else if (G.base === 'nomiss') {
     totalLine = err > G.param ? `ズレが ${fmt(G.param)}° を超えました。最終称号：${titleNomiss(G.cleared)}` : `${G.cleared}連続成功`;
-    if (err <= G.param) promo = `<div class="sh-meta" style="color:#a3261f;font-weight:700">${G.cleared < LADDER.length ? '昇進！' : '最高位！'} ${esc(titleNomiss(G.cleared))}</div>`;
+    if (err <= G.param) {
+      const now = titleNomiss(G.cleared), top = NOMISS_TITLES[NOMISS_TITLES.length - 1][1];
+      if (now !== titleNomiss(G.cleared - 1)) promo = `<div class="sh-meta" style="color:#a3261f;font-weight:700">昇進！ ${esc(now)}</div>`;
+      else if (now === top) promo = `<div class="sh-meta" style="color:#a3261f;font-weight:700">最高位！ ${esc(now)}</div>`;
+    }
   }
   else totalLine = `合計 ${fmt(G.total)}°`;
   sheet(`${stampHTML(err)}<div class="sh-verdict">${esc(verdict(err))}</div>
