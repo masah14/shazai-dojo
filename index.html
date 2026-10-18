@@ -1371,9 +1371,16 @@ if (!window.isSecureContext) $('#slider-note').textContent = 'このページは
 const sg = v => v < 0 ? '−' + (-v) : String(v);                       // マイナスは「−」で見せる
 const sgf = v => (v < 0 ? '−' : '') + Math.abs(v).toFixed(1);
 const tname = t => t < 0 ? '仰け反り' : t <= 20 ? '会釈' : t <= 35 ? '敬礼' : t <= 55 ? '最敬礼' : t <= 75 ? '深謝' : '土下座';
-const verdict = e => e <= 0.5 ? '完璧。誠意が痛いほど伝わる' : e <= 1.5 ? '見事な謝罪' : e <= 3 ? 'まあ、許そう' : e <= 6 ? 'もう少し誠意を' : e <= 12 ? 'それで謝ってるつもり？' : '出直してこい';
-const GRADES = [[0.5, 'S', '完璧'], [1.5, 'A', '合格'], [3, 'B', '許す'], [6, 'C', '保留'], [12, 'D', '再提出'], [Infinity, 'E', '出禁']];
-const grade = e => { const g = GRADES.find(x => e <= x[0]); return { rank: g[1], label: g[2] }; };
+// 1問ごとのハンコと、ひとこと。モードによって、言葉が変わる（ノーミス：完璧／合格／セーフ／アウト、サバイバル：無傷／軽傷／重傷／瀕死、ほか：いつもの6段階）
+const GRADES = [[0.5, 'S', '完璧'], [1.5, 'A', '合格'], [3, 'B', '許す'], [6, 'C', '惜しい'], [12, 'D', '残念'], [Infinity, 'E', '出直し']];
+const NOMISS_GRADES = [[3, 'S', '完璧'], [7, 'A', '合格'], [10, 'B', 'セーフ'], [Infinity, 'E', 'アウト']];
+const SURVIVAL_GRADES = [[1.5, 'S', '無傷'], [5, 'A', '軽傷'], [10, 'B', '重傷'], [Infinity, 'E', '瀕死']];
+const GENERIC_VERDICTS = ['完璧。誠意が痛いほど伝わる', '見事な謝罪', 'まあ、許そう', 'もう少し誠意を', 'それで謝ってるつもり？', '出直してこい'];
+const NOMISS_VERDICTS = ['完璧。誠意が痛いほど伝わる', '見事な謝罪', 'ギリギリ、許そう', '出直してこい'];
+const SURVIVAL_VERDICTS = ['無傷。お見事', 'かすり傷で済んだ', 'けっこう痛いぞ', 'これは致命傷だ…'];
+const gradeTable = () => G && G.base === 'nomiss' ? [NOMISS_GRADES, NOMISS_VERDICTS] : G && G.base === 'survival' ? [SURVIVAL_GRADES, SURVIVAL_VERDICTS] : [GRADES, GENERIC_VERDICTS];
+const verdict = e => { const [t, v] = gradeTable(); return v[t.findIndex(x => e <= x[0])]; };
+const grade = e => { const g = gradeTable()[0].find(x => e <= x[0]); return { rank: g[1], label: g[2] }; };
 const stampHTML = e => { const g = grade(e); return `<div class="stamp r-${g.rank}"><span>${g.label}</span></div>`; };
 const scene = t => t < 0 ? 'もはや謝罪ではない' : t <= 12 ? '軽く会釈' : t <= 20 ? 'すれ違いのご挨拶' : t <= 28 ? 'お客様のお出迎え' : t <= 36 ? 'ちょっとした遅刻のお詫び' : t <= 46 ? 'ミスをしたときのお詫び' : t <= 56 ? '取引先への正式なお詫び' : t <= 66 ? '会社を揺るがすミス' : t <= 76 ? '世間を騒がせてしまった' : t <= 84 ? '社長と並んで謝罪会見' : 'もう土下座しかない';
 // ノーミスの称号：成功した回数で決まる。[この回数から, 称号]
@@ -1493,7 +1500,7 @@ function doLock(a) {
   if (G.kind === 'online') { if (RM.on) rmLocked(); else onlineLocked(); }
   setTimeout(() => {
     if (R !== r) return;
-    if (G.kind !== 'online') { if (G.street) streetMood(moodOf(r.err)); else setMood(moodOf(r.err), true); }   // 対戦の先生は審判なので、表情を変えない
+    if (G.kind !== 'online') { if (G.street) streetMood(G.base === 'nomiss' ? (r.err <= 3 ? 'delight' : r.err <= 7 ? 'happy' : r.err <= G.param ? 'wait' : r.err <= 15 ? 'angry' : 'furious') : moodOf(r.err)); else setMood(moodOf(r.err), true); }   // ノーミス：合格ラインに合わせて、相手の表情も変える   // 対戦の先生は審判なので、表情を変えない
     flash(r.err <= 1.5 ? 2 : 1);
     sfx.lock(r.err); vib(r.err <= 1.5 ? [30, 40, 30] : 40); celebrate(r.err);
     if (G.kind !== 'online') soloLocked();
