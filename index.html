@@ -294,15 +294,17 @@ svg .vsp text{fill:#1b2236;font:700 9.5px var(--sans);text-anchor:middle}
 .doc-score{position:relative;text-align:center;padding:14px 16px 4px}
 .doc-score small{display:block;font-size:13px;color:#5a6a86;letter-spacing:.24em}
 #s-final.office .doc .fi-big{color:#1b2a4e;font-size:80px;margin-top:2px}
-.doc-stamp{position:absolute;right:8px;top:16px;width:68px;height:68px;border:3.5px solid #d62839;border-radius:50%;color:#d62839;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:700;font-size:16px;letter-spacing:.02em;transform:rotate(-14deg);opacity:.92}
+.doc-stamp{position:absolute;right:8px;top:16px;width:68px;height:68px;border:3.5px solid #d62839;border-radius:50%;color:#d62839;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15;font-family:var(--serif);font-weight:700;font-size:16px;letter-spacing:.02em;transform:rotate(-14deg);opacity:.92}
 .doc-line{text-align:center;padding:2px 16px 12px;font-size:14px;color:#33405a}
 .doc-line b{font-family:var(--serif);font-size:26px;color:#a3261f;margin:0 4px;letter-spacing:.06em}
+.doc-line small{display:block;font-size:12px;color:#5a6a86;margin-top:2px}
 .doc-tbl{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
 .doc-tbl th{background:#e8edf5;color:#33405a;font-weight:700;font-size:12px;padding:5px 14px;text-align:right}
 .doc-tbl td{padding:6px 14px;text-align:right;border-top:1px solid rgba(27,34,54,.1)}
 .doc-tbl th:first-child,.doc-tbl td:first-child{text-align:left}
 .doc-scale{padding:10px 16px 12px;font-size:12px;color:#5a6a86;background:#f1f4f9;line-height:1.75}
 .doc-scale b{color:#33405a}
+.doc-stamp small{font-size:9px;letter-spacing:0}
 .doc-scale .sc{display:flex;flex-wrap:wrap;gap:0 14px;margin:2px 0}
 .doc-scale .sc span{white-space:nowrap}
 .doc-scale i{font-style:normal;display:block}
@@ -999,7 +1001,11 @@ const grade = e => { const g = GRADES.find(x => e <= x[0]); return { rank: g[1],
 const stampHTML = e => { const g = grade(e); return `<div class="stamp r-${g.rank}"><span>${g.label}</span></div>`; };
 const scene = t => t < 0 ? 'もはや謝罪ではない' : t <= 12 ? '軽く会釈' : t <= 20 ? 'すれ違いのご挨拶' : t <= 28 ? 'お客様のお出迎え' : t <= 36 ? 'ちょっとした遅刻のお詫び' : t <= 46 ? 'ミスをしたときのお詫び' : t <= 56 ? '取引先への正式なお詫び' : t <= 66 ? '会社を揺るがすミス' : t <= 76 ? '世間を騒がせてしまった' : t <= 84 ? '社長と並んで謝罪会見' : 'もう土下座しかない';
 const titleN = n => n >= 20 ? '謝罪会見の達人' : n >= 15 ? '部長クラス' : n >= 10 ? '中堅社員' : n >= 6 ? '新入社員' : n >= 3 ? '要研修' : '出禁';
-const titleAvg = a => a <= 0.8 ? '神の角度' : a <= 1.5 ? 'プロの謝罪' : a <= 3 ? '社会人レベル' : a <= 6 ? '要研修' : '出禁';
+// 称号とハンコ：誤差の合計（5問の合計。問の数がちがうときは、平均×5）で決める。[上限, 前につく言葉, 称号]
+const TITLES = [[5, '謝罪の', '神様'], [10, '謝罪の', '天才'], [20, '謝罪の', '逸材'], [30, '謝罪の', '秀才'], [50, '謝罪の', '凡才'], [70, '', '半人前'], [90, '', '能無し'], [120, '', '論外'], [Infinity, '', '出禁']];
+const titleOfAvg = a => TITLES.find(x => a * 5 <= x[0] + 1e-9);
+const titleAvg = a => { const t = titleOfAvg(a); return t[1] + t[2]; };
+const stampOfAvg = a => { const t = titleOfAvg(a); return { pre: t[1], label: t[2] }; };
 // お題の角度：ふつうは 10〜100°。ときどき（約1割、3問目から、続けては出ない）マイナス（仰け反り）が出る。
 // 練習は5°きざみでマイナス無し、ほかは1°きざみ。範囲は -100〜100°
 function genTarget(i, prev, step = 1, rnd = Math.random) {
@@ -1347,10 +1353,10 @@ function finishSolo(over) {
     $('#fi-body').innerHTML = `<div class="doc">
       <div class="doc-head"><b>謝罪道場</b><span>誠意評価書</span></div>
       <div class="doc-meta"><span>1日1回限り　本番謝罪　${esc(G.day)}</span><span>${esc(S.name)} 様</span></div>
-      <div class="doc-score"><small>誤差の合計</small>${bigHTML}<div class="doc-stamp"><span>${esc(grade(s.avg).label)}</span></div></div>
-      <div class="doc-line">総合評価<b>${esc(title)}</b>（平均ズレ ${fmt(s.avg)}°）</div>
+      <div class="doc-score"><small>誤差の合計</small>${bigHTML}<div class="doc-stamp">${stampOfAvg(s.avg).pre ? `<small>${esc(stampOfAvg(s.avg).pre)}</small>` : ''}<span>${esc(stampOfAvg(s.avg).label)}</span></div></div>
+      <div class="doc-line">総合評価<b>${esc(title)}</b><small>平均ズレ ${fmt(s.avg)}°</small></div>
       <table class="doc-tbl"><thead><tr><th>お題</th><th>あなたの角度</th><th>ズレ</th></tr></thead><tbody>${rows || '<tr><td colspan="3">記録なし</td></tr>'}</tbody></table>
-      <div class="doc-scale"><b>評価の目安（平均ズレ）</b><div class="sc"><span>0.8°以内　神の角度</span><span>1.5°以内　プロの謝罪</span><span>3°以内　社会人レベル</span><span>6°以内　要研修</span><span>それ以上　出禁</span></div><i>でたらめに押すと、平均30°前後になります</i></div>
+      <div class="doc-scale"><b>称号の目安（誤差の合計）</b><div class="sc">${TITLES.map((t, i) => `<span>${t[0] === Infinity ? 'それ以上' : '〜' + t[0] + '°'}　${t[1]}${t[2]}</span>`).join('')}</div><i>でたらめに押すと、合計150°前後になります</i></div>
     </div>`;
   } else {
   $('#fi-body').innerHTML = `<div class="fi-title">${esc(MODE[G.mode].name)}</div>
@@ -1362,7 +1368,7 @@ function finishSolo(over) {
   }
   G.shareText = shareTextSolo(s, title, G.day);
   const lastL = G.log[G.log.length - 1] || {};
-  G.card = { title: MODE[G.mode].name + (G.mode === 'daily' ? '　' + G.day : ''), big: String(big), unit, rank: title, sub, angle: lastL.angle != null ? lastL.angle : 45, target: lastL.target != null ? lastL.target : null, grade: grade(s.avg), mood: moodOf(s.avg), dojo: G.mode !== 'daily' };
+  G.card = { title: MODE[G.mode].name + (G.mode === 'daily' ? '　' + G.day : ''), big: String(big), unit, rank: title, sub, angle: lastL.angle != null ? lastL.angle : 45, target: lastL.target != null ? lastL.target : null, grade: stampOfAvg(s.avg), mood: moodOf(s.avg), dojo: G.mode !== 'daily' };
   $('#fi-again').textContent = 'もう一度'; $('#fi-again').hidden = false; $('#fi-again').onclick = () => startSolo(G.mode);
   const daily = G.mode === 'daily';
   $('#fi-again').hidden = daily && DAILY_ONCE;   // 本番謝罪を1日1回にしたときだけ、「もう一度」を隠す
@@ -1532,7 +1538,10 @@ function drawCardOffice(x, W, H, c, serif, sans) {
   x.save(); x.translate(918, 1052); x.rotate(-14 * Math.PI / 180);
   x.strokeStyle = '#d62839'; x.fillStyle = '#d62839'; x.lineWidth = 7; x.beginPath(); x.arc(0, 0, 66, 0, 7); x.stroke();
   x.lineWidth = 2.2; x.beginPath(); x.arc(0, 0, 57, 0, 7); x.stroke();
-  x.font = `700 ${c.grade.label.length > 2 ? 28 : 38}px ${serif}`; x.textBaseline = 'middle'; x.fillText(c.grade.label, 0, 2); x.restore();
+  x.textBaseline = 'middle';
+  if (c.grade.pre) { x.font = `700 20px ${serif}`; x.fillText(c.grade.pre, 0, -17); x.font = `700 36px ${serif}`; x.fillText(c.grade.label, 0, 14); }
+  else { x.font = `700 ${c.grade.label.length > 2 ? 30 : 40}px ${serif}`; x.fillText(c.grade.label, 0, 2); }
+  x.restore();
   x.textBaseline = 'alphabetic'; x.fillStyle = 'rgba(246,241,231,.88)'; x.font = `500 28px ${sans}`; x.fillText('スマホを傾けて、誠意の角度を測ろう', W / 2, 1334);
 }
 function drawCard(c) {
@@ -1552,7 +1561,10 @@ function drawCard(c) {
   x.save(); x.translate(915, 250); x.rotate(-14 * Math.PI / 180);
   x.strokeStyle = '#d62839'; x.fillStyle = '#d62839'; x.lineWidth = 8; x.beginPath(); x.arc(0, 0, 76, 0, 7); x.stroke();
   x.lineWidth = 2.5; x.beginPath(); x.arc(0, 0, 66, 0, 7); x.stroke();
-  x.font = `700 ${c.grade.label.length > 2 ? 34 : 44}px ${serif}`; x.textBaseline = 'middle'; x.fillText(c.grade.label, 0, 2); x.restore();
+  x.textBaseline = 'middle';
+  if (c.grade.pre) { x.font = `700 24px ${serif}`; x.fillText(c.grade.pre, 0, -20); x.font = `700 42px ${serif}`; x.fillText(c.grade.label, 0, 16); }
+  else { x.font = `700 ${c.grade.label.length > 2 ? 34 : 44}px ${serif}`; x.fillText(c.grade.label, 0, 2); }
+  x.restore();
   // 数字
   cardBig(x, W / 2, 1130, c.big, c.unit, 210, serif, sans, '#e9b44c', '#f6f1e7');
   x.textAlign = 'center';
@@ -1909,7 +1921,7 @@ function onlineEnd(m) {
   if (G) {
     const tot = (rk[mine - 1] || {}).total || 0, avg = G.rounds ? tot / G.rounds : tot;
     G.shareText = `【謝罪道場】オンライン対戦 ${rk.length}人中${mine}位！（誤差の合計 ${fmt(tot)}°）`;
-    G.card = { title: 'オンライン対戦', big: String(mine), unit: `位 / ${rk.length}人`, rank: mine === 1 ? '優勝' : '次は勝つ', sub: `誤差の合計 ${fmt(tot)}°（${G.rounds}回勝負）`, angle: G.lastAngle != null ? G.lastAngle : 45, target: G.lastTarget != null ? G.lastTarget : null, grade: grade(avg), mood: moodOf(avg), dojo: true };
+    G.card = { title: 'オンライン対戦', big: String(mine), unit: `位 / ${rk.length}人`, rank: mine === 1 ? '優勝' : '次は勝つ', sub: `誤差の合計 ${fmt(tot)}°（${G.rounds}回勝負）`, angle: G.lastAngle != null ? G.lastAngle : 45, target: G.lastTarget != null ? G.lastTarget : null, grade: stampOfAvg(avg), mood: moodOf(avg), dojo: true };
   }
   $('#fi-again').textContent = '部屋に戻る'; $('#fi-again').hidden = false;
   $('#fi-again').onclick = () => { R = null; sheet(null); renderLobby(); show('s-lobby'); };
@@ -2325,7 +2337,7 @@ function rmShowEnd(res, out, why) {
     ${lines}`;
   const avg = myE != null ? myE : 10;
   G.shareText = RM.bot ? `【謝罪道場】ランクマッチの練習で${label}` : `【謝罪道場】ランクマッチ（${KINDS[RM.kind]}）で${label}${out && !out.already ? ` レート${out.rating}（${tierOf(out.rating)}）` : ''}`;
-  G.card = { title: 'ランクマッチ（' + KINDS[RM.kind] + '）', big: label, unit: '', rank: out && !out.already ? tierOf(out.rating) : '', sub: out && !out.already ? `レート ${out.rating}（${out.delta > 0 ? '+' : ''}${out.delta}）` : '', angle: G.lastAngle != null ? G.lastAngle : 45, target: G.lastTarget != null ? G.lastTarget : null, grade: grade(avg), mood: moodOf(avg), dojo: true };
+  G.card = { title: 'ランクマッチ（' + KINDS[RM.kind] + '）', big: label, unit: '', rank: out && !out.already ? tierOf(out.rating) : '', sub: out && !out.already ? `レート ${out.rating}（${out.delta > 0 ? '+' : ''}${out.delta}）` : '', angle: G.lastAngle != null ? G.lastAngle : 45, target: G.lastTarget != null ? G.lastTarget : null, grade: stampOfAvg(avg), mood: moodOf(avg), dojo: true };
   $('#fi-rank').hidden = true; $('#fi-rankopen').hidden = true;
   $('#fi-again').textContent = 'もう一度対戦'; $('#fi-again').hidden = false; $('#fi-again').onclick = () => { show('s-ranked'); rmRenderMe(); rmFind(); };
   $('#fi-menu').textContent = 'ランクマッチへ'; $('#fi-menu').onclick = () => rmOpenHub(true);
