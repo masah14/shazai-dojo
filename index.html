@@ -332,6 +332,10 @@ svg .vsp text{fill:#1b2236;font:700 9.5px var(--sans);text-anchor:middle}
 .doc-tbl td{padding:6px 10px;text-align:right;border-top:1px solid rgba(27,34,54,.1)}
 .doc-tbl th{padding-left:10px;padding-right:10px}
 .doc-tbl td:last-child,.doc-tbl th:last-child{text-align:center;white-space:nowrap}
+.doc-tbl th.n,.doc-tbl td.n{text-align:center}
+.doc-tbl td.n span{display:inline-block;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.doc-tbl td.a span{width:3.7em}
+.doc-tbl td.d span{width:3.2em}
 .mini-stamp{display:inline-block;font-family:var(--serif);font-weight:700;font-size:11px;line-height:1.5;padding:0 6px;border:1.6px solid #c4152a;color:#c4152a;border-radius:7px;transform:rotate(-6deg);white-space:nowrap}
 .mini-stamp.r-D,.mini-stamp.r-E{color:#5a2a8a;border-color:#5a2a8a}
 .log .lh{opacity:.65;font-size:12px}
@@ -1771,7 +1775,7 @@ function finishSolo(over) {
   const streetRes = !!G.street; $('#s-final').classList.toggle('street', streetRes); $('#s-final').style.backgroundImage = streetRes ? streetBg(G.street.scene) : '';
   if (streetRes) {   // サバイバル／ノーミス：道の背景に、評価書
     const lab = title.length > 4 ? [title.slice(0, Math.ceil(title.length / 2)), title.slice(Math.ceil(title.length / 2))] : ['', title];
-    const rows = G.log.map((l, i) => `<tr><td>${i + 1}. ${sg(l.target)}°</td><td>${sgf(l.angle)}°</td><td>${l.err.toFixed(1)}°</td><td>${miniStamp(l.err)}</td></tr>`).join('');
+    const rows = G.log.map((l, i) => `<tr><td>${i + 1}. ${sg(l.target)}°</td><td class="n a"><span>${sgf(l.angle)}°</span></td><td class="n d"><span>${l.err.toFixed(1)}°</span></td><td>${miniStamp(l.err)}</td></tr>`).join('');
     const trailTxt = G.base === 'nomiss' && s.cleared > 0 ? `昇進：${trailOf(s.cleared)}` : '';
     $('#fi-body').innerHTML = `<div class="doc">
       <div class="doc-head"><b>謝罪道場</b><span>${esc(MODE[G.mode].name)}</span></div>
@@ -1779,16 +1783,16 @@ function finishSolo(over) {
       <div class="doc-score"><small>${G.base === 'nomiss' ? '連続成功' : '突破ステージ'}</small><div class="fi-big">${big}<small>${G.base === 'nomiss' ? '連続' : 'ステージ'}</small></div><div class="doc-stamp">${lab[0] ? `<small>${esc(lab[0])}</small>` : ''}<span>${esc(lab[1])}</span></div></div>
       <div class="doc-line">${G.base === 'nomiss' ? '最終称号' : '称号'}<b>${esc(title)}</b>${isNew ? '<small style="color:#a3261f;font-weight:700">NEW RECORD</small>' : `<small>${esc(sub)}</small>`}</div>
       ${trailTxt ? `<div class="doc-trail">${trailTxt}</div>` : ''}
-      <table class="doc-tbl"><thead><tr><th>お題の角度</th><th>あなたの角度</th><th>ズレ</th><th>判定</th></tr></thead><tbody>${rows || '<tr><td colspan="4">記録なし</td></tr>'}</tbody></table>
+      <table class="doc-tbl"><thead><tr><th>お題の角度</th><th class="n">あなたの角度</th><th class="n">ズレ</th><th>判定</th></tr></thead><tbody>${rows || '<tr><td colspan="4">記録なし</td></tr>'}</tbody></table>
     </div>`;
   } else if (office) {   // 本番謝罪：会社の「評価書」
-    const rows = G.log.map((l, i) => `<tr><td>${i + 1}. ${sg(l.target)}°</td><td>${sgf(l.angle)}°</td><td>${l.err.toFixed(1)}°</td><td>${miniStamp(l.err)}</td></tr>`).join('');
+    const rows = G.log.map((l, i) => `<tr><td>${i + 1}. ${sg(l.target)}°</td><td class="n a"><span>${sgf(l.angle)}°</span></td><td class="n d"><span>${l.err.toFixed(1)}°</span></td><td>${miniStamp(l.err)}</td></tr>`).join('');
     $('#fi-body').innerHTML = `<div class="doc">
       <div class="doc-head"><b>謝罪道場</b><span>誠意評価書</span></div>
       <div class="doc-meta"><span>1日1回限り　本番謝罪　${esc(G.day)}</span><span>${esc(S.name)} 様</span></div>
       <div class="doc-score"><small>誤差の合計</small>${bigHTML}<div class="doc-stamp">${stampOfAvg(s.avg).pre ? `<small>${esc(stampOfAvg(s.avg).pre)}</small>` : ''}<span>${esc(stampOfAvg(s.avg).label)}</span></div></div>
       <div class="doc-line">総合評価<b>${esc(title)}</b><small>平均ズレ ${fmt(s.avg)}°</small></div>
-      <table class="doc-tbl"><thead><tr><th>お題の角度</th><th>あなたの角度</th><th>ズレ</th><th>判定</th></tr></thead><tbody>${rows || '<tr><td colspan="4">記録なし</td></tr>'}</tbody></table>
+      <table class="doc-tbl"><thead><tr><th>お題の角度</th><th class="n">あなたの角度</th><th class="n">ズレ</th><th>判定</th></tr></thead><tbody>${rows || '<tr><td colspan="4">記録なし</td></tr>'}</tbody></table>
     </div>`;
   } else {
   $('#fi-body').innerHTML = `<div class="fi-title">${esc(MODE[G.mode].name)}</div>
