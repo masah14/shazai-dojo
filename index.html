@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#101b34">
 <meta name="description" content="スマホを前に倒して、お題のお辞儀の角度にぴったり合わせるゲーム。誤差の小さい人が勝ち。友達とオンライン対戦もできます。">
 <link rel="canonical" href="https://shazaidojo.com/">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7039412568193199" crossorigin="anonymous"></script>
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://shazaidojo.com/">
 <meta property="og:site_name" content="謝罪道場">
@@ -554,13 +555,16 @@ const MODE = Object.fromEntries(MODES.map(m => [m.key, m]));
 /* ---------- 広告 ----------
    Google AdSense の「ca-pub-…」と広告ユニットの slot ID を入れると、メニューと結果画面にだけ広告が出ます。
    空のままなら、広告は表示されず、枠も出ません。ゲーム中の画面には出しません（誤クリック防止）。 */
-const ADS = { client: '', slot: '' };
+const ADS = { client: 'ca-pub-7039412568193199', slot: '' };   // slot は、審査に通って広告ユニットを作ったら入れる
 function initAds() {
   if (!ADS.client || !ADS.slot) return;
-  const s = document.createElement('script');
-  s.async = true; s.crossOrigin = 'anonymous';
-  s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + encodeURIComponent(ADS.client);
-  document.head.appendChild(s);
+  // <head> に、審査用の同じスクリプトを、すでに置いてある。二重に読み込まない
+  if (!document.querySelector('script[src*="adsbygoogle.js"]')) {
+    const s = document.createElement('script');
+    s.async = true; s.crossOrigin = 'anonymous';
+    s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + encodeURIComponent(ADS.client);
+    document.head.appendChild(s);
+  }
   $$('[data-ad]').forEach(el => {
     el.hidden = false;
     el.innerHTML = '<small>広告</small><ins class="adsbygoogle" style="display:block" data-ad-client="' + esc(ADS.client) + '" data-ad-slot="' + esc(ADS.slot) + '" data-ad-format="auto" data-full-width-responsive="true"></ins>';
