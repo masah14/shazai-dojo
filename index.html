@@ -760,6 +760,7 @@ const mouth = (cy, r, mood = 'wait') => {
   if (mood === 'open') return PP(`M${-r * .28} ${my - 3} Q0 ${my + 9} ${r * .28} ${my - 3}Z`, '#6b1f24');
   return SS(`M${-r * .22} ${my} H${r * .22}`, INK, 2.2);
 };
+const glasses = (R, hy, col, w = 1.8) => `<circle cx="${-R * .38}" cy="${hy + R * .08}" r="${R * .32}" fill="none" stroke="${col}" stroke-width="${w}"/><circle cx="${R * .38}" cy="${hy + R * .08}" r="${R * .32}" fill="none" stroke="${col}" stroke-width="${w}"/>` + SS(`M${-R * .06} ${hy + R * .08} H${R * .06}`, col, w);
 const blush = (cy, r) => C(-r * .72, cy + r * .38, 4, '#f08a8a', 'opacity=".5"') + C(r * .72, cy + r * .38, 4, '#f08a8a', 'opacity=".5"');
 const shadow = w => E(0, 0, w, 4.5, 'rgba(0,0,0,.18)');
 
@@ -795,7 +796,7 @@ const CHARS = {
   oji: (m = 'wait') => human({ mood: m, pants: '#6b5a48', top: '#6f9460', topDeco: ({ bt }) => PP(`M-6 ${bt} L0 ${bt + 14} L6 ${bt}Z`, '#f6f1e7'), shoes: '#4a3a2a',
     hair: ({ R, hy }) => PP(`M${-R} ${hy - 2} Q${-R - 8} ${hy + 4} ${-R + 2} ${hy + 14} Q${-R + 4} ${hy + 4} ${-R + 3} ${hy - 4}Z`, '#e9eaee') + PP(`M${R} ${hy - 2} Q${R + 8} ${hy + 4} ${R - 2} ${hy + 14} Q${R - 4} ${hy + 4} ${R - 3} ${hy - 4}Z`, '#e9eaee')
       + SS(`M-12 ${hy - R + 3} Q0 ${hy - R - 2} 12 ${hy - R + 3}`, '#dcdde2', 3) + SS(`M-14 ${hy - 8} H-4 M4 ${hy - 8} H14`, '#e8e8ee', 4),
-    front: ({ R, hy }) => SS(`M${-R * .4} ${hy + 1.5} a${R * .31} ${R * .31} 0 1 0 .1 0M${R * .4} ${hy + 1.5} a${R * .31} ${R * .31} 0 1 0 .1 0M-3 ${hy + 1.5} H3`, '#3a3f4a', 1.7)
+    front: ({ R, hy }) => ''
       + PP(`M-11 ${hy + 12} Q-5 ${hy + 8.5} 0 ${hy + 10.5} Q5 ${hy + 8.5} 11 ${hy + 12} Q5 ${hy + 16} 0 ${hy + 14} Q-5 ${hy + 16} -11 ${hy + 12}Z`, '#e6e8ee')
       + SS('M33 -78 L37 0', '#7a5a3a', 3.5) + SS('M33 -78 Q33 -90 43 -87', '#7a5a3a', 3.5) }),
   oba: (m = 'wait') => human({ mood: m, top: '#8a6aa8', sleeve: '#7a5a98', blush: true,
@@ -803,7 +804,7 @@ const CHARS = {
     topDeco: ({ bt }) => C(0, bt + 8, 2.4, '#f6f1e7') + C(-6, bt + 9, 2.4, '#f6f1e7') + C(6, bt + 9, 2.4, '#f6f1e7'),
     behindHead: ({ R, hy }) => C(0, hy - R - 6, 9, '#c9cbd2'),
     hair: ({ R, hy }) => hairShort('#c9cbd2')({ R, hy }),
-    front: ({ R, hy, bt, B }) => SS(`M${-R * .4} ${hy + 1.5} a${R * .31} ${R * .31} 0 1 0 .1 0M${R * .4} ${hy + 1.5} a${R * .31} ${R * .31} 0 1 0 .1 0M-3 ${hy + 1.5} H3`, '#8a5a6a', 1.6)
+    front: ({ R, hy, bt, B }) => glasses(R, hy, '#8a5a6a', 1.8)
       + RC(30, bt + B * .8 + 4, 20, 17, 3, '#8b5a3a') + SS(`M33 ${bt + B * .8 + 4} q7 -9 14 0`, '#6b3f1d', 2.2) }),
   onii: (m = 'wait') => human({ mood: m, pants: '#3a5a8a', top: '#e9833a', shoes: '#f4f4f4',
     topDeco: ({ bt }) => PP(`M-12 ${bt} Q0 ${bt + 12} 12 ${bt} L12 ${bt + 4} Q0 ${bt + 16} -12 ${bt + 4}Z`, '#d46f28') + SS(`M-3 ${bt + 12} v10 M3 ${bt + 12} v10`, '#f6f1e7', 1.6),
