@@ -875,7 +875,7 @@ const CHARS = {
     const W = '#f3f1ea', FACE = '#dfe6ee', HAIR = '#17171f';
     const arm = d => SS(`M${d * 27} -142 Q${d * 47} -122 ${d * 39} -101`, W, 12) + E(d * 37, -92, 7, 10.5, FACE) + SS(`M${d * 33} -85 l-1 8 M${d * 37} -83 l0 9 M${d * 41} -85 l1 8`, FACE, 2.4);
     const flame = (x, y, k) => PP(`M${x} ${y} Q${x - 11 * k} ${y - 16 * k} ${x} ${y - 36 * k} Q${x + 11 * k} ${y - 16 * k} ${x} ${y}Z`, '#8fd0ff', 'opacity=".85"') + PP(`M${x} ${y - 3 * k} Q${x - 5 * k} ${y - 14 * k} ${x} ${y - 24 * k} Q${x + 5 * k} ${y - 14 * k} ${x} ${y - 3 * k}Z`, '#e8f8ff') + C(x, y - 14 * k, 17 * k, '#8fd0ff', 'opacity=".16"');
-    const mouth = m === 'happy' ? SS('M-6 -156 Q0 -150 6 -156', '#6b2a3a', 1.8) : m === 'angry' ? E(0, -155, 4, 5.4, '#2a0e16') : SS('M-5 -156 q5 3 10 0', '#6b2a3a', 1.8);
+    const mouth = m === 'happy' ? SS('M-5 -151 Q0 -146 5 -151', '#6b2a3a', 1.8) : m === 'angry' ? E(0, -150, 3.6, 4.4, '#2a0e16') : SS('M-4 -150.5 q4 2.5 8 0', '#6b2a3a', 1.8);
     return flame(-54, -108, 1) + flame(58, -64, .7)
       + `<g opacity=".95">`
       + PP('M-27 -176 Q-39 -130 -33 -92 Q-22 -100 -18 -96 L18 -96 Q22 -100 33 -92 Q39 -130 27 -176Z', HAIR)
@@ -885,8 +885,8 @@ const CHARS = {
       + PP('M-24 -170 Q-35 -134 -29 -94 Q-21 -106 -16 -100 Q-22 -136 -16 -168Z', HAIR) + PP('M24 -170 Q35 -134 29 -94 Q21 -106 16 -100 Q22 -136 16 -168Z', HAIR)
       + E(-21, -168, 3, 5, FACE) + E(21, -168, 3, 5, FACE) + C(0, -170, 21, FACE) + C(0, -170, 21, 'rgba(90,100,140,.14)')
       + E(-8, -168, 5.6, 7.4, 'rgba(40,40,70,.42)') + E(8, -168, 5.6, 7.4, 'rgba(40,40,70,.42)') + E(-8, -168, 3.2, 4.8, '#0e0e16') + E(8, -168, 3.2, 4.8, '#0e0e16') + C(-9, -170, .9, '#fff') + C(7, -170, .9, '#fff')
-      + SS('M0 -166 v5', '#b8c2d2', 1.4) + mouth
-      + PP('M-22 -176 Q-18 -195 0 -195 Q18 -195 22 -176 Q13 -187 7 -170 Q4 -183 -2 -172 Q-8 -185 -14 -168 Q-18 -176 -22 -176Z', HAIR) + PP('M2 -187 Q11 -176 9 -157 Q5 -170 0 -181Z', HAIR)
+      + mouth
+      + PP('M-23 -178 Q-20 -197 0 -197 Q20 -197 23 -178 L22 -158 L17 -153 L12 -161 L7 -154 L2 -162 L-3 -154 L-8 -161 L-13 -153 L-18 -160 L-23 -154Z', HAIR) + SS('M-10 -192 Q-12 -170 -9 -158 M2 -194 Q1 -172 3 -160 M12 -191 Q14 -172 11 -159', '#2c2c3a', 1.1)
       + PP('M-5 -192 L5 -192 L0 -180Z', '#f6f6f6', 'stroke="#aaa" stroke-width=".8"')
       + `</g>`;
   },
@@ -1277,9 +1277,10 @@ const GRADES = [[0.5, 'S', '完璧'], [1.5, 'A', '合格'], [3, 'B', '許す'], 
 const grade = e => { const g = GRADES.find(x => e <= x[0]); return { rank: g[1], label: g[2] }; };
 const stampHTML = e => { const g = grade(e); return `<div class="stamp r-${g.rank}"><span>${g.label}</span></div>`; };
 const scene = t => t < 0 ? 'もはや謝罪ではない' : t <= 12 ? '軽く会釈' : t <= 20 ? 'すれ違いのご挨拶' : t <= 28 ? 'お客様のお出迎え' : t <= 36 ? 'ちょっとした遅刻のお詫び' : t <= 46 ? 'ミスをしたときのお詫び' : t <= 56 ? '取引先への正式なお詫び' : t <= 66 ? '会社を揺るがすミス' : t <= 76 ? '世間を騒がせてしまった' : t <= 84 ? '社長と並んで謝罪会見' : 'もう土下座しかない';
-// ノーミス：1回成功するごとに、称号が1つ上がる（会社の出世。0回は出禁）
-const LADDER = ['出禁', '研修生', '新入社員', '平社員', '主任', '係長', '課長補佐', '課長', '次長', '部長', '事業部長', '執行役員', '取締役', '常務', '専務', '副社長', '社長', '会長', '相談役', '謝罪会見の達人', '謝罪の神様'];
+// ノーミス：論外から始まり、1回成功するごとに、称号が1つ上がる（謝罪の神様まで）
+const LADDER = ['論外', '能無し', '半人前', '謝罪の凡才', '謝罪の秀才', '謝罪の逸材', '謝罪の天才', '謝罪の神様'];
 const titleNomiss = n => LADDER[Math.min(Math.max(n, 0), LADDER.length - 1)];
+const trailOf = n => { const top = Math.min(n, LADDER.length - 1), from = Math.max(0, top - 3); return (from > 0 ? '… → ' : '') + LADDER.slice(from, top + 1).map(esc).join(' → '); };   // 上がってきた称号（最後の4つ）
 const titleN = n => n >= 20 ? '謝罪会見の達人' : n >= 15 ? '部長クラス' : n >= 10 ? '中堅社員' : n >= 6 ? '新入社員' : n >= 3 ? '要研修' : '出禁';
 // 称号とハンコ：誤差の合計（5問の合計。問の数がちがうときは、平均×5）で決める。[上限, 前につく言葉, 称号]
 const TITLES = [[5, '謝罪の', '神様'], [10, '謝罪の', '天才'], [20, '謝罪の', '逸材'], [30, '謝罪の', '秀才'], [50, '謝罪の', '凡才'], [70, '', '半人前'], [90, '', '能無し'], [120, '', '論外'], [Infinity, '', '出禁']];
@@ -1605,7 +1606,7 @@ function soloLocked() {
   if (G.base === 'survival') { const hp = Math.max(0, r1(G.param - G.total)); totalLine = hp <= 0 ? 'HPが0になりました' : `HP ${fmt(hp)} / ${G.param}${err > 0 ? `（−${err.toFixed(1)}）` : '（減りませんでした）'}`; }
   else if (G.base === 'nomiss') {
     totalLine = err > G.param ? `ズレが ${fmt(G.param)}° を超えました。最終称号：${titleNomiss(G.cleared)}` : `${G.cleared}連続成功`;
-    if (err <= G.param) promo = `<div class="sh-meta" style="color:#a3261f;font-weight:700">昇進！ ${esc(titleNomiss(G.cleared))}</div>`;
+    if (err <= G.param) promo = `<div class="sh-meta" style="color:#a3261f;font-weight:700">${G.cleared < LADDER.length ? '昇進！' : '最高位！'} ${esc(titleNomiss(G.cleared))}</div>`;
   }
   else totalLine = `合計 ${fmt(G.total)}°`;
   sheet(`${stampHTML(err)}<div class="sh-verdict">${esc(verdict(err))}</div>
@@ -1643,7 +1644,7 @@ function finishSolo(over) {
   if (streetRes) {   // サバイバル／ノーミス：道の背景に、評価書
     const lab = title.length > 4 ? [title.slice(0, Math.ceil(title.length / 2)), title.slice(Math.ceil(title.length / 2))] : ['', title];
     const rows = G.log.map((l, i) => `<tr><td>${i + 1}. お題 ${sg(l.target)}°</td><td>${sgf(l.angle)}°</td><td>${l.err.toFixed(1)}°</td></tr>`).join('');
-    const trailTxt = G.base === 'nomiss' && s.cleared > 0 ? `昇進：${s.cleared > 4 ? '… → ' : ''}${LADDER.slice(Math.max(0, s.cleared - 4), s.cleared + 1).map(esc).join(' → ')}` : '';
+    const trailTxt = G.base === 'nomiss' && s.cleared > 0 ? `昇進：${trailOf(s.cleared)}` : '';
     $('#fi-body').innerHTML = `<div class="doc">
       <div class="doc-head"><b>謝罪道場</b><span>${esc(MODE[G.mode].name)}</span></div>
       <div class="doc-meta"><span>${G.base === 'nomiss' ? `ズレ ${fmt(s.param)}° 以内を、何連続で決められる？` : `HP ${s.param}。何ステージ突破できる？`}</span><span>${esc(S.name)} 様</span></div>
@@ -1665,7 +1666,7 @@ function finishSolo(over) {
   $('#fi-body').innerHTML = `<div class="fi-title">${esc(MODE[G.mode].name)}</div>
     ${bigHTML}
     <div class="fi-title" style="color:var(--gold)">${esc(title)}</div>
-    ${G.base === 'nomiss' && s.cleared > 0 ? `<div class="fi-sub">昇進：${s.cleared > 4 ? '… → ' : ''}${LADDER.slice(Math.max(0, s.cleared - 4), s.cleared + 1).map(esc).join(' → ')}</div>` : ''}
+    ${G.base === 'nomiss' && s.cleared > 0 ? `<div class="fi-sub">昇進：${trailOf(s.cleared)}</div>` : ''}
     ${isNew ? '<div class="fi-new">NEW RECORD</div>' : ''}
     <div class="fi-sub">${esc(sub)}</div>
     <div class="log">${logs || '<div>記録なし</div>'}</div>`;
