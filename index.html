@@ -535,9 +535,9 @@ const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch
 
 /* ---------- 定数 ---------- */
 const ONLINE_LIMIT = 25000;
-// 「本番謝罪」を1日1回にするか。いまはテスト中なので false（何回でも遊べる）。公開するときは true にする。
-// true にするときは、サーバーのルールも「1日1回」のほうに替える（ランキング設定.md を参照）
-const DAILY_ONCE = false;
+// 「本番謝罪」を1日1回にするか。true＝1日1回（いまの設定）、false＝何回でも遊べる（テスト用）。
+// false に戻すときは、サーバーのルールも「何回でも（良い記録だけ更新）」のほうに替える（ランキング設定.md を参照）
+const DAILY_ONCE = true;
 const MODES = [
   { key: 'daily', name: '1日1回限り　本番謝罪', desc: '今日は全員が同じ5問。誤差の合計で、順位がつきます。' },
   { key: 'practice', name: '練習', desc: 'ゆっくり練習。このモードは終わりがありません。' },
