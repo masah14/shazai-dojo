@@ -329,7 +329,14 @@ svg .vsp text{fill:#1b2236;font:700 9.5px var(--sans);text-anchor:middle}
 .doc-line small{display:block;font-size:12px;color:#5a6a86;margin-top:2px}
 .doc-tbl{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
 .doc-tbl th{background:#e8edf5;color:#33405a;font-weight:700;font-size:12px;padding:5px 14px;text-align:right}
-.doc-tbl td{padding:6px 14px;text-align:right;border-top:1px solid rgba(27,34,54,.1)}
+.doc-tbl td{padding:6px 10px;text-align:right;border-top:1px solid rgba(27,34,54,.1)}
+.doc-tbl th{padding-left:10px;padding-right:10px}
+.doc-tbl td:last-child,.doc-tbl th:last-child{text-align:center;white-space:nowrap}
+.mini-stamp{display:inline-block;font-family:var(--serif);font-weight:700;font-size:11px;line-height:1.5;padding:0 6px;border:1.6px solid #c4152a;color:#c4152a;border-radius:7px;transform:rotate(-6deg);white-space:nowrap}
+.mini-stamp.r-D,.mini-stamp.r-E{color:#5a2a8a;border-color:#5a2a8a}
+.log .lh{opacity:.65;font-size:12px}
+.log .mini-stamp{color:#f6c9a0;border-color:#f6c9a0;margin-left:6px}
+.log .mini-stamp.r-D,.log .mini-stamp.r-E{color:#d9b8ff;border-color:#d9b8ff}
 .doc-tbl th:first-child,.doc-tbl td:first-child{text-align:left}
 .doc-stamp small{font-size:9px;letter-spacing:0}
 .fi-title{text-align:center;font-family:var(--serif);font-size:24px;letter-spacing:.08em}
@@ -1385,6 +1392,7 @@ const SURVIVAL_VERDICTS = ['無傷。お見事', 'かすり傷で済んだ', '�
 const gradeTable = () => G && G.base === 'nomiss' ? [NOMISS_GRADES, NOMISS_VERDICTS] : G && G.base === 'survival' ? [SURVIVAL_GRADES, SURVIVAL_VERDICTS] : [GRADES, GENERIC_VERDICTS];
 const verdict = e => { const [t, v] = gradeTable(); return v[t.findIndex(x => e <= x[0])]; };
 const grade = e => { const g = gradeTable()[0].find(x => e <= x[0]); return { rank: g[1], label: g[2] }; };
+const miniStamp = e => { const g = grade(e); return `<span class="mini-stamp r-${g.rank}">${g.label}</span>`; };   // 結果の表の、1問ごとの小さなハンコ
 const stampHTML = e => { const g = grade(e); return `<div class="stamp r-${g.rank}"><span>${g.label}</span></div>`; };
 const scene = t => t < 0 ? 'もはや謝罪ではない' : t <= 12 ? '軽く会釈' : t <= 20 ? 'すれ違いのご挨拶' : t <= 28 ? 'お客様のお出迎え' : t <= 36 ? 'ちょっとした遅刻のお詫び' : t <= 46 ? 'ミスをしたときのお詫び' : t <= 56 ? '取引先への正式なお詫び' : t <= 66 ? '会社を揺るがすミス' : t <= 76 ? '世間を騒がせてしまった' : t <= 84 ? '社長と並んで謝罪会見' : 'もう土下座しかない';
 // ノーミスの称号：成功した回数で決まる。[この回数から, 称号]
@@ -1756,14 +1764,14 @@ function finishSolo(over) {
   else if (G.base === 'nomiss') { big = s.cleared; unit = '連続成功'; title = titleNomiss(s.cleared); sub = `ズレ ${fmt(s.param)}° 以内を ${s.cleared} 連続`; }
   else if (G.base === 'score') { big = fmt(s.total); unit = '°'; title = titleAvg(s.avg); sub = `${G.mode === 'daily' ? G.day + '　' : ''}${s.param}回の誤差の合計（平均 ${fmt(s.avg)}°）`; }
   else { big = fmt(s.avg); unit = '° 平均'; title = '練習終了'; sub = `${s.rounds}回　合計 ${fmt(s.total)}°`; }
-  const logs = G.log.map((l, i) => `<div><span>${i + 1}. お題 ${sg(l.target)}°</span><span>${sgf(l.angle)}°（ズレ ${l.err.toFixed(1)}）</span></div>`).join('');
+  const logs = G.log.map((l, i) => `<div><span>${i + 1}. ${sg(l.target)}°</span><span>${sgf(l.angle)}°（ズレ ${l.err.toFixed(1)}）${miniStamp(l.err)}</span></div>`).join('');
   const bigHTML = `<div class="fi-big">${big}${unit === '°' ? '<sup class="deg">°</sup>' : `<small>${unit}</small>`}</div>`;
   const office = G.mode === 'daily';
   $('#s-final').classList.toggle('office', office);
   const streetRes = !!G.street; $('#s-final').classList.toggle('street', streetRes); $('#s-final').style.backgroundImage = streetRes ? streetBg(G.street.scene) : '';
   if (streetRes) {   // サバイバル／ノーミス：道の背景に、評価書
     const lab = title.length > 4 ? [title.slice(0, Math.ceil(title.length / 2)), title.slice(Math.ceil(title.length / 2))] : ['', title];
-    const rows = G.log.map((l, i) => `<tr><td>${i + 1}. お題 ${sg(l.target)}°</td><td>${sgf(l.angle)}°</td><td>${l.err.toFixed(1)}°</td></tr>`).join('');
+    const rows = G.log.map((l, i) => `<tr><td>${i + 1}. ${sg(l.target)}°</td><td>${sgf(l.angle)}°</td><td>${l.err.toFixed(1)}°</td><td>${miniStamp(l.err)}</td></tr>`).join('');
     const trailTxt = G.base === 'nomiss' && s.cleared > 0 ? `昇進：${trailOf(s.cleared)}` : '';
     $('#fi-body').innerHTML = `<div class="doc">
       <div class="doc-head"><b>謝罪道場</b><span>${esc(MODE[G.mode].name)}</span></div>
@@ -1771,16 +1779,16 @@ function finishSolo(over) {
       <div class="doc-score"><small>${G.base === 'nomiss' ? '連続成功' : '突破ステージ'}</small><div class="fi-big">${big}<small>${G.base === 'nomiss' ? '連続' : 'ステージ'}</small></div><div class="doc-stamp">${lab[0] ? `<small>${esc(lab[0])}</small>` : ''}<span>${esc(lab[1])}</span></div></div>
       <div class="doc-line">${G.base === 'nomiss' ? '最終称号' : '称号'}<b>${esc(title)}</b>${isNew ? '<small style="color:#a3261f;font-weight:700">NEW RECORD</small>' : `<small>${esc(sub)}</small>`}</div>
       ${trailTxt ? `<div class="doc-trail">${trailTxt}</div>` : ''}
-      <table class="doc-tbl"><thead><tr><th>お題</th><th>あなたの角度</th><th>ズレ</th></tr></thead><tbody>${rows || '<tr><td colspan="3">記録なし</td></tr>'}</tbody></table>
+      <table class="doc-tbl"><thead><tr><th>お題の角度</th><th>あなたの角度</th><th>ズレ</th><th>判定</th></tr></thead><tbody>${rows || '<tr><td colspan="4">記録なし</td></tr>'}</tbody></table>
     </div>`;
   } else if (office) {   // 本番謝罪：会社の「評価書」
-    const rows = G.log.map((l, i) => `<tr><td>${i + 1}. お題 ${sg(l.target)}°</td><td>${sgf(l.angle)}°</td><td>${l.err.toFixed(1)}°</td></tr>`).join('');
+    const rows = G.log.map((l, i) => `<tr><td>${i + 1}. ${sg(l.target)}°</td><td>${sgf(l.angle)}°</td><td>${l.err.toFixed(1)}°</td><td>${miniStamp(l.err)}</td></tr>`).join('');
     $('#fi-body').innerHTML = `<div class="doc">
       <div class="doc-head"><b>謝罪道場</b><span>誠意評価書</span></div>
       <div class="doc-meta"><span>1日1回限り　本番謝罪　${esc(G.day)}</span><span>${esc(S.name)} 様</span></div>
       <div class="doc-score"><small>誤差の合計</small>${bigHTML}<div class="doc-stamp">${stampOfAvg(s.avg).pre ? `<small>${esc(stampOfAvg(s.avg).pre)}</small>` : ''}<span>${esc(stampOfAvg(s.avg).label)}</span></div></div>
       <div class="doc-line">総合評価<b>${esc(title)}</b><small>平均ズレ ${fmt(s.avg)}°</small></div>
-      <table class="doc-tbl"><thead><tr><th>お題</th><th>あなたの角度</th><th>ズレ</th></tr></thead><tbody>${rows || '<tr><td colspan="3">記録なし</td></tr>'}</tbody></table>
+      <table class="doc-tbl"><thead><tr><th>お題の角度</th><th>あなたの角度</th><th>ズレ</th><th>判定</th></tr></thead><tbody>${rows || '<tr><td colspan="4">記録なし</td></tr>'}</tbody></table>
     </div>`;
   } else {
   $('#fi-body').innerHTML = `<div class="fi-title">${esc(MODE[G.mode].name)}</div>
@@ -1789,7 +1797,7 @@ function finishSolo(over) {
     ${G.base === 'nomiss' && s.cleared > 0 ? `<div class="fi-sub">昇進：${trailOf(s.cleared)}</div>` : ''}
     ${isNew ? '<div class="fi-new">NEW RECORD</div>' : ''}
     <div class="fi-sub">${esc(sub)}</div>
-    <div class="log">${logs || '<div>記録なし</div>'}</div>`;
+    <div class="log">${logs ? `<div class="lh"><span>お題の角度</span><span>あなたの角度（ズレ）</span></div>${logs}` : '<div>記録なし</div>'}</div>`;
   }
   G.shareText = shareTextSolo(s, title, G.day);
   const lastL = G.log[G.log.length - 1] || {};
