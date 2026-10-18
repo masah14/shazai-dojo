@@ -302,12 +302,7 @@ svg .vsp text{fill:#1b2236;font:700 9.5px var(--sans);text-anchor:middle}
 .doc-tbl th{background:#e8edf5;color:#33405a;font-weight:700;font-size:12px;padding:5px 14px;text-align:right}
 .doc-tbl td{padding:6px 14px;text-align:right;border-top:1px solid rgba(27,34,54,.1)}
 .doc-tbl th:first-child,.doc-tbl td:first-child{text-align:left}
-.doc-scale{padding:10px 16px 12px;font-size:12px;color:#5a6a86;background:#f1f4f9;line-height:1.75}
-.doc-scale b{color:#33405a}
 .doc-stamp small{font-size:9px;letter-spacing:0}
-.doc-scale .sc{display:flex;flex-wrap:wrap;gap:0 14px;margin:2px 0}
-.doc-scale .sc span{white-space:nowrap}
-.doc-scale i{font-style:normal;display:block}
 .fi-title{text-align:center;font-family:var(--serif);font-size:24px;letter-spacing:.08em}
 .fi-new{text-align:center;color:var(--gold);font-weight:700;letter-spacing:.15em}
 .fi-sub{text-align:center;color:var(--dim)}
@@ -1356,7 +1351,6 @@ function finishSolo(over) {
       <div class="doc-score"><small>誤差の合計</small>${bigHTML}<div class="doc-stamp">${stampOfAvg(s.avg).pre ? `<small>${esc(stampOfAvg(s.avg).pre)}</small>` : ''}<span>${esc(stampOfAvg(s.avg).label)}</span></div></div>
       <div class="doc-line">総合評価<b>${esc(title)}</b><small>平均ズレ ${fmt(s.avg)}°</small></div>
       <table class="doc-tbl"><thead><tr><th>お題</th><th>あなたの角度</th><th>ズレ</th></tr></thead><tbody>${rows || '<tr><td colspan="3">記録なし</td></tr>'}</tbody></table>
-      <div class="doc-scale"><b>称号の目安（誤差の合計）</b><div class="sc">${TITLES.map((t, i) => `<span>${t[0] === Infinity ? 'それ以上' : '〜' + t[0] + '°'}　${t[1]}${t[2]}</span>`).join('')}</div><i>でたらめに押すと、合計150°前後になります</i></div>
     </div>`;
   } else {
   $('#fi-body').innerHTML = `<div class="fi-title">${esc(MODE[G.mode].name)}</div>
@@ -1524,7 +1518,7 @@ function drawCardOffice(x, W, H, c, serif, sans) {
   x.fillStyle = '#f6f1e7'; x.fillRect(790, 358, 210, 114);
   x.fillStyle = '#6a7790'; x.font = `500 24px ${sans}`; x.fillText('社訓', 895, 392);
   x.fillStyle = '#33405a'; x.font = `700 64px ${serif}`; x.fillText('誠意', 895, 452);
-  cardFigure(x, 360, 735, 2, c.angle, c.target, false);
+  cardFigure(x, 360, 735, 2, c.angle, null, false);   // お題の赤い影（ピンクの枠）は、画像には出さない
   cardCustomer(x, 800, 903, 2, c.mood, false);
   // 評価書（紙）
   x.save(); x.shadowColor = 'rgba(20,30,55,.4)'; x.shadowBlur = 26; x.shadowOffsetY = 8;
@@ -1555,7 +1549,7 @@ function drawCard(c) {
   x.textAlign = 'center'; x.textBaseline = 'alphabetic';
   x.fillStyle = '#f6f1e7'; x.font = `700 92px ${serif}`; x.fillText('謝罪道場', W / 2, 196);
   x.fillStyle = '#e9b44c'; x.font = `600 40px ${sans}`; x.fillText(c.title, W / 2, 266);
-  cardFigure(x, 360, 735, 2, c.angle, c.target, c.dojo);
+  cardFigure(x, 360, 735, 2, c.angle, null, c.dojo);   // お題の赤い影（ピンクの枠）は、画像には出さない
   cardCustomer(x, 800, 903, 2, c.mood, c.dojo);
   // ハンコ
   x.save(); x.translate(915, 250); x.rotate(-14 * Math.PI / 180);
