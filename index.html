@@ -89,6 +89,7 @@ h2.plaque{align-self:center;background:#6e4426;color:#f6f1e7;border:3px solid #4
 .lang-seg{display:inline-flex;border:1.5px solid rgba(246,241,231,.5);border-radius:999px;overflow:hidden;background:rgba(16,27,52,.78);z-index:4}
 .lang-seg button{padding:6px 11px;background:none;border:0;color:var(--paper);font-size:12px;font-weight:700;line-height:1.2;opacity:.85;cursor:pointer}
 .lang-seg button.on{background:var(--gold);color:var(--ink);opacity:1}
+.lang-seg svg{width:14px;height:14px;vertical-align:-3px;margin-right:5px}   /* 日本語の横の、丸い日本の国旗 */
 #s-menu>.lang-seg{position:absolute;top:max(8px,env(safe-area-inset-top));right:10px}
 .modal .lang-seg{align-self:flex-end;border-color:rgba(27,34,54,.4);background:none}
 .modal .lang-seg button{color:var(--ink)}
@@ -436,7 +437,7 @@ svg .vsp text{fill:#1b2236;font:700 9.5px var(--sans);text-anchor:middle}
 
   <!-- メニュー -->
   <section id="s-menu" class="screen wood on">
-    <div class="lang-seg" translate="no" role="group" aria-label="Language"><button type="button" data-l="ja">日本語</button><button type="button" data-l="en">English</button></div>
+    <div class="lang-seg" translate="no" role="group" aria-label="Language"><button type="button" data-l="ja"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9.3" fill="#fff" stroke="#b9bdc9" stroke-width="1"/><circle cx="10" cy="10" r="4.4" fill="#d62839"/></svg>日本語</button><button type="button" data-l="en">English</button></div>
     <div class="hero" id="hero"></div>
     <h1 class="title">謝罪道場</h1>
     <p class="lead">〜 謝罪の角度を極めろ 〜<br>スマホを前に倒して、誠意の角度をぴったり決める。</p>
@@ -621,7 +622,7 @@ svg .vsp text{fill:#1b2236;font:700 9.5px var(--sans);text-anchor:middle}
 
   <div class="modal" id="m-how" hidden>
     <div class="box">
-      <div class="lang-seg" translate="no" role="group" aria-label="Language"><button type="button" data-l="ja">日本語</button><button type="button" data-l="en">English</button></div>
+      <div class="lang-seg" translate="no" role="group" aria-label="Language"><button type="button" data-l="ja"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9.3" fill="#fff" stroke="#b9bdc9" stroke-width="1"/><circle cx="10" cy="10" r="4.4" fill="#d62839"/></svg>日本語</button><button type="button" data-l="en">English</button></div>
       <h3 style="margin:0;font-family:var(--serif);font-size:22px">遊び方</h3>
       <ol>
         <li>スマホを<b>縦</b>に持って、画面を自分に向けます。まっすぐ立てた状態が<b>0°</b>、水平が<b>90°</b>です。</li>
