@@ -1091,6 +1091,23 @@ if (GA_ON) {
 }
 // 遊ばれた回数を、モードごとに数える（イベント名に、モードを入れる：play_start_daily、play_finish_nomiss、share_result など）
 const track = (name, p) => { if (GA_ON) { try { gtag('event', name, p || {}); } catch (e) {} } };
+/* ---------- 星詠みデイリーからの案内（遊んだことを知らせる） ---------- */
+// 星詠みデイリー（hoshiyomi-daily.com）から来るリンクには、?hy=印 が付く。印は、このタブの中（sessionStorage）にだけ覚えて、URLからは消す。
+// 1回遊び終えて、結果が出たときに、1回だけ「遊んだ」と知らせる（送る内容は、印とゲームの名前だけ。個人を特定する情報は、送らない）。送ったら、印は消す。
+// 失敗しても、ゲームは止めない。印が無いときは、何もしない（今までどおり）。見た目は、変えない。
+const HY_KEY = 'hy';
+try {
+  const u = new URL(location.href), t = u.searchParams.get('hy');
+  if (t !== null) {
+    if (/^[\w.~=+\/-]{1,300}$/.test(t)) sessionStorage.setItem(HY_KEY, t);
+    u.searchParams.delete('hy'); history.replaceState(null, '', u.pathname + u.search + u.hash);
+  }
+} catch (e) {}
+const hyPlayed = () => {
+  let t = null; try { t = sessionStorage.getItem(HY_KEY); sessionStorage.removeItem(HY_KEY); } catch (e) {}
+  if (!t) return;
+  try { fetch('https://hoshiyomi-daily.com/api/ad/played', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token: t, game: 'shazai-dojo' }), keepalive: true }).catch(() => {}); } catch (e) {}
+};
 /* ---------- 名前の禁止ワード ---------- */
 // 全角・半角、カタカナ・ひらがな、すき間の記号、数字での言い換え（1→i など）をそろえて調べる。使えない名前は、入力できず、画面でも「＊＊＊」で隠す
 const nameKey = s => String(s).normalize('NFKC').toLowerCase().replace(/[\u30a1-\u30f6]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60)).replace(/[^\p{L}\p{N}]/gu, '');
@@ -2179,7 +2196,7 @@ function summarySolo(over) {
   return s;
 }
 function finishSolo(over) {
-  track('play_finish_' + G.mode);
+  track('play_finish_' + G.mode); hyPlayed();
   const s = summarySolo(over);
   let isNew = false;
   const k = bestKey(G.mode, G.input || curKind()), b = S.best[k];
@@ -2839,7 +2856,7 @@ function onlineResult(m) {
     <div class="sh-meta">${m.last ? 'まもなく最終結果です…' : 'まもなく次のお題です'}</div>`);
 }
 function onlineEnd(m) {
-  track('play_finish_online');
+  track('play_finish_online'); hyPlayed();
   Net.inGame = false;
   $('#fi-rank').hidden = true; $('#fi-rankopen').hidden = true;
   const rk = m.ranking;
@@ -3252,7 +3269,7 @@ async function rmFinish(why) {
   idle(); rmShowEnd(res, out, why);
 }
 function rmShowEnd(res, out, why) {
-  track(RM.bot ? 'play_finish_cpu' : 'play_finish_ranked');
+  track(RM.bot ? 'play_finish_cpu' : 'play_finish_ranked'); hyPlayed();
   const label = res === 'win' ? '勝利！' : res === 'loss' ? '敗北…' : '引き分け';
   const rs = RM.res || {}, myE = rs.me ? rs.me.e : null, opE = rs.opp ? rs.opp.e : null;
   let rate = '', note = '';
