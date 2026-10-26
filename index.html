@@ -444,7 +444,7 @@ svg .vsp text{fill:#1b2236;font:700 9.5px var(--sans);text-anchor:middle}
     <p class="lead">〜 謝罪の角度を極めろ 〜<br>スマホを前に倒して、誠意の角度をぴったり決める。</p>
     <label class="field"><span>名前</span><input id="in-name" maxlength="10" autocomplete="off" placeholder="名前"></label>
     <div class="menu-btns">
-      <button class="btn primary big" id="b-daily">1日1回限り　本番謝罪<small id="b-daily-sub">5問の誤差の合計で、全国の順位がつきます</small></button>
+      <button class="btn primary big" id="b-daily">1日1回限り　本番謝罪<small id="b-daily-sub">1問の誤差で、全国の順位がつきます</small></button>
       <div class="row2">
         <button class="btn ghost small" id="b-rank" type="button">今日のランキングを見る</button>
         <button class="btn ghost small" id="b-rank-y" type="button">昨日のランキングを見る</button>
@@ -679,6 +679,7 @@ try {
   if (S.dailyRec) { S.dailyRecs = S.dailyRecs || {}; S.dailyRecs[S.dailyRec.kind || 'slider'] = S.dailyRec; delete S.dailyRec; }
   if (S.dailyTop) { S.dailyTops = S.dailyTops || {}; S.dailyTops[S.dailyTop.kind || 'slider'] = { day: S.dailyTop.day, total: S.dailyTop.total }; delete S.dailyTop; }
   if (S.rm && S.rm.rating != null) delete S.rm;
+  if (S.dailyRecs) for (const k of Object.keys(S.dailyRecs)) if (!S.dailyRecs[k] || !S.dailyRecs[k].done) delete S.dailyRecs[k];   // 本番は1問勝負になったので、途中の記録は無い
 } catch (e) {}
 /* ---------- 言語（日本語／English） ---------- */
 // 画面の文字は、日本語で書いてある。English のときは、画面に出す直前に、下の辞書で英語に置きかえる
@@ -706,7 +707,7 @@ if (LANG === 'en') {
     'スマホを前に倒して、誠意の角度をぴったり決める。': 'A quick, silly Japanese game: tilt your phone and nail the bowing angle.',
     '名前': 'Name',
     '1日1回限り　本番謝罪': 'Official Apology (once a day)',
-    '5問の誤差の合計で、全国の順位がつきます': 'Your total error over 5 rounds decides your worldwide rank',
+    '1問の誤差で、全国の順位がつきます': 'Your error in one round decides your worldwide rank',
     '今日のランキングを見る': "Today's Ranking",
     '昨日のランキングを見る': "Yesterday's Ranking",
     'ランクマッチ': 'Ranked Match',
@@ -785,7 +786,7 @@ if (LANG === 'en') {
     '減らす': 'Decrease',
     '増やす': 'Increase',
     // --- モード ---
-    '今日は全員が同じ5問。誤差の合計で、順位がつきます。': 'Everyone gets the same 5 targets today. Ranked by total error.',
+    '今日は全員が同じお題の、一発勝負。誤差が小さい順に、順位がつきます。': 'One shot: everyone gets the same target today. Ranked by smallest error.',
     '練習': 'Practice',
     'ゆっくり練習。このモードは終わりがありません。': 'Take your time. This mode never ends.',
     'サバイバル': 'Survival',
@@ -864,7 +865,9 @@ if (LANG === 'en') {
     // --- メニューの説明 ---
     'いまはテスト中：何回でも遊べます': 'Test mode: play as many times as you like',
     '両方の部門に挑戦ずみ（また明日！）': 'Both divisions completed (see you tomorrow!)',
-    '5問の誤差の合計で、全国の順位がつきます（部門ごとに1回）': 'Your total error over 5 rounds decides your worldwide rank (one try per division)',
+    '1問の誤差で、全国の順位がつきます（部門ごとに1回）': 'Your error in one round decides your worldwide rank (one try per division)',
+    '一発勝負': 'One shot',
+    '誤差': 'Error',
     '今日は、両方の部門に挑戦ずみです。また明日！': "You've completed both divisions today. See you tomorrow!",
     'スライダー部門は挑戦ずみです。センサー部門に挑戦するには、設定で操作を「センサー」に戻してください': 'The Slider Division is already done. To try the Sensor Division, set Controls to “Sensor” in Settings.',
     'その名前は使えません': 'That name is not allowed',
@@ -958,10 +961,7 @@ if (LANG === 'en') {
     [/^今日（(.+)）はまだ挑戦していません$/, (m, a) => `You haven't tried today (${a}) yet`],
     [/^あなたのレート (\d+)（(.+)）　知らない人と1問勝負$/, (m, a, b) => `Your rating: ${a} (${T(b)}) · One-round duel vs a random player`],
     [/^センサー (.+)　スライダー (.+)（挑戦は部門ごとに1回）$/, (m, a, b) => `Sensor: ${T(a)} · Slider: ${T(b)} (one try per division)`],
-    [/^途中から再開できます（(.+)・(\d+) \/ 5 問 終わり）$/, (m, a, b) => `Resume where you left off (${T(a)} · ${b} / 5 done)`],
-    [/^続きから挑戦する（(.+)・(\d+) \/ 5 問 終わり）$/, (m, a, b) => `Continue the challenge (${T(a)} · ${b} / 5 done)`],
     [/^(.+)は、挑戦ずみです。\nスライダー部門（画面のスライダーで操作）に挑戦しますか？$/, (m, a) => `The ${T(a)} is already done.\nTry the Slider Division (uses the on-screen slider)?`],
-    [/^(\d+)問目まで終わっています。続きからです$/, (m, a) => `${pl(a, 'round')} already done. Continuing from there.`],
     [/^本番謝罪　(\d+) \/ (\d+) 回目$/, (m, a, b) => `Official · Round ${a} / ${b}`],
     [/^(\d+) \/ (\d+) 回目$/, (m, a, b) => `Round ${a} / ${b}`],
     [/^1日1回限り　本番謝罪　(.+)$/, (m, a) => `Official Apology · ${a}`],
@@ -1018,11 +1018,11 @@ if (LANG === 'en') {
     [/^コードを友達に伝えてください：(.+)$/, (m, a) => `Tell your friends the code: ${a}`],
     [/^謝罪道場で勝負しよう！部屋コード：(.+)$/, (m, a) => `Challenge me at Apology Dojo! Room code: ${a}`],
     // 共有する文章
-    [/^【謝罪道場】本番謝罪 (.+)：誤差の合計 (.+)°（平均 (.+)°）！称号：(.+)$/, (m, a, b, c, d) => `[Apology Dojo] Official Apology ${a}: total error ${b}° (avg ${c}°)! Title: ${T(d)}`],
+    [/^【謝罪道場】本番謝罪 (.+)：誤差 (.+)°！称号：(.+)$/, (m, a, b, c) => `[Apology Dojo] Official Apology ${a}: error ${b}°! Title: ${T(c)}`],
     [/^【謝罪道場】(.+?)（HP(\d+)）で(\d+)ステージ突破！称号：(.+)$/, (m, a, b, c, d) => `[Apology Dojo] ${T(a)} (HP ${b}): cleared ${pl(c, 'stage')}! Title: ${T(d)}`],
     [/^【謝罪道場】(.+?)（ズレ(.+)°以内）で(\d+)連続成功！称号：(.+)$/, (m, a, b, c, d) => `[Apology Dojo] ${T(a)} (within ${b}°): ${c} in a row! Title: ${T(d)}`],
     [/^【謝罪道場】(.+?)（(\d+)回）の誤差の合計は(.+)°！称号：(.+)$/, (m, a, b, c, d) => `[Apology Dojo] ${T(a)} (${pl(b, 'round')}): total error ${c}°! Title: ${T(d)}`],
-    [/^【謝罪道場】本番謝罪 (.+)（(.+)）：(\d+)位！誤差の合計 (.+)°$/, (m, a, b, c, d) => `[Apology Dojo] Official Apology ${a} (${T(b)}): #${c}! Total error ${d}°`],
+    [/^【謝罪道場】本番謝罪 (.+)（(.+)）：(\d+)位！誤差 (.+)°$/, (m, a, b, c, d) => `[Apology Dojo] Official Apology ${a} (${T(b)}): #${c}! Error ${d}°`],
     [/^【謝罪道場】オンライン対戦 (\d+)人中(\d+)位！（誤差の合計 (.+)°）$/, (m, a, b, c) => `[Apology Dojo] Play with Friends: #${b} of ${a}! (Total error ${c}°)`],
     [/^【謝罪道場】ランクマッチの練習で(.+)$/, (m, a) => `[Apology Dojo] Ranked Match (vs CPU): ${T(a)}`],
     [/^【謝罪道場】ランクマッチ（(.+?)）で(勝利！|敗北…|引き分け)(?: レート(\d+)（(.+)）)?$/, (m, a, b, c, d) => `[Apology Dojo] Ranked Match (${T(a)}): ${T(b)}${c ? ` Rating ${c} (${T(d)})` : ''}`],
@@ -1152,7 +1152,7 @@ const ONLINE_LIMIT = 25000;
 // false に戻すときは、サーバーのルールも「何回でも（良い記録だけ更新）」のほうに替える（ランキング設定.md を参照）
 const DAILY_ONCE = true;
 const MODES = [
-  { key: 'daily', name: '1日1回限り　本番謝罪', desc: '今日は全員が同じ5問。誤差の合計で、順位がつきます。' },
+  { key: 'daily', name: '1日1回限り　本番謝罪', desc: '今日は全員が同じお題の、一発勝負。誤差が小さい順に、順位がつきます。' },
   { key: 'practice', name: '練習', desc: 'ゆっくり練習。このモードは終わりがありません。' },
   { key: 'survival', name: 'サバイバル', desc: 'HPは50。ズレたぶんだけ減っていき、0になったらアウト。何ステージ突破できる？', fixed: true },
   { key: 'nomiss', name: 'ノーミス', desc: 'ズレが10°を超えたらアウト。成功を重ねるほど、称号が上がっていく。何連続で決められる？', fixed: true },
@@ -1863,8 +1863,8 @@ function genTarget(i, prev, step = 1, rnd = Math.random) {
   } while (t === prev && ++n < 10);
   return t;
 }
-// 今日のお題：日付から決まる乱数で、その日は誰でも同じ5問になる
-// 日付は日本時間で切り替える（世界のどこで遊んでも、同じ日は同じ5問）
+// 今日のお題：日付から決まる乱数で、その日は誰でも同じお題になる
+// 日付は日本時間で切り替える（世界のどこで遊んでも、同じ日は同じお題）
 const dailyId = () => new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
 function seededRng(str) {
   let h = 1779033703 ^ str.length;
@@ -1872,9 +1872,10 @@ function seededRng(str) {
   let a = h >>> 0;
   return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 }
+const DAILY_ROUNDS = 1;   // 本番謝罪の問題数（2026-10-27 に、5問から1問の一発勝負に変えた）
 function dailyTargets(id) {
   const rnd = seededRng('shazai-' + id), out = [];
-  for (let i = 1; i <= 5; i++) out.push(genTarget(i, out[i - 2], 1, rnd));
+  for (let i = 1; i <= DAILY_ROUNDS; i++) out.push(genTarget(i, out[i - 2], 1, rnd));
   return out;
 }
 
@@ -1949,7 +1950,7 @@ $('#g-ok').addEventListener('click', pressOK);
 function doLock(a) {
   if (!R || R.phase !== 'play') return;
   const r = R;
-  r.phase = 'locked'; r.angle = r1(a); r.err = r1(Math.abs(r.angle - r.target));
+  r.phase = 'locked'; r.angle = r1(a); r.err = r1(Math.abs(r.angle - r.target)); r.err2 = Math.round(Math.abs(a - r.target) * 100) / 100;
   G.lastAngle = r.angle; G.lastTarget = r.target;
   vib(25); sfx.tap();
   // 答え合わせ：ここで初めて絵が、押した角度までお辞儀する
@@ -2027,7 +2028,8 @@ function updateHeader() {
     bar.style.width = ratio * 100 + '%'; bar.style.background = ratio > .5 ? 'var(--ok)' : ratio > .25 ? '#e9b44c' : 'var(--red)';
   }
   else if (G.base === 'nomiss') { l = `STAGE ${G.round}`; r = `${G.cleared}連続　${titleNomiss(G.cleared)}`; }
-  else if (G.base === 'score') { l = `${G.mode === 'daily' ? '本番謝罪　' : ''}${G.round} / ${G.param} 回目`; r = `合計 ${fmt(r1(G.total))}°`; }
+  else if (G.mode === 'daily') { l = '本番謝罪'; r = '一発勝負'; }
+  else if (G.base === 'score') { l = `${G.round} / ${G.param} 回目`; r = `合計 ${fmt(r1(G.total))}°`; }
   else { l = '練習'; r = `${G.round}回目　合計 ${fmt(r1(G.total))}°`; }
   if (G.streak >= 2) r += `　連続◎${G.streak}`;
   $('#g-info').textContent = l; $('#g-sub').textContent = r;
@@ -2072,14 +2074,12 @@ function updateMenu() {
   const rb = $('#b-ranked-sub'), rk = S.rm && S.rm[curKind()];
   if (rb) rb.textContent = rk ? `あなたのレート ${rk.rating}（${tierOf(rk.rating)}）　知らない人と1問勝負` : '知らない人とリアルタイム対戦。レートを上げよう';
   const rs = { sensor: dailyRec('sensor'), slider: dailyRec('slider') };
-  const prog = DKINDS.map(k => rs[k]).find(r => r && r.log.length && !r.done);
   const both = rs.sensor && rs.sensor.done && rs.slider && rs.slider.done, some = (rs.sensor && rs.sensor.done) || (rs.slider && rs.slider.done);
-  const st = k => rs[k] && rs[k].done ? `${fmt(rs[k].total)}°` : '未挑戦';
-  $('#b-daily-sub').textContent = prog ? `途中から再開できます（${KINDS[prog.kind]}・${prog.log.length} / 5 問 終わり）`
-    : !DAILY_ONCE ? 'いまはテスト中：何回でも遊べます'
+  const st = k => rs[k] && rs[k].done ? `${fmt(r1(rs[k].total))}°` : '未挑戦';
+  $('#b-daily-sub').textContent = !DAILY_ONCE ? 'いまはテスト中：何回でも遊べます'
     : both ? '両方の部門に挑戦ずみ（また明日！）'
     : some ? `センサー ${st('sensor')}　スライダー ${st('slider')}（挑戦は部門ごとに1回）`
-    : '5問の誤差の合計で、全国の順位がつきます（部門ごとに1回）';
+    : '1問の誤差で、全国の順位がつきます（部門ごとに1回）';
 }
 $('#b-online').onclick = () => { Sensor.enable(); sfx.unlock(); show('s-online'); };
 $('#b-set').onclick = () => { Sensor.enable(); show('s-set'); };
@@ -2115,8 +2115,7 @@ function startSolo(mode) {
   const daily = mode === 'daily', day = dailyId();
   let rec = null, dk = null;
   if (daily) {
-    // 途中の記録があれば、その部門の続きから。なければ、いまの操作方法の部門で始める
-    dk = DKINDS.find(k => { const r = dailyRec(k); return r && r.log.length && !r.done; }) || curKind();
+    dk = curKind();   // いまの操作方法の部門で始める
     rec = dailyRec(dk);
     if (rec && rec.done) {
       if (DAILY_ONCE) {   // 挑戦は、部門ごとに1回。もう一方の部門が、まだなら、そちらに挑戦できる
@@ -2129,13 +2128,7 @@ function startSolo(mode) {
     }
     forceSlider = dk === 'slider';   // スライダー部門は、センサーがある端末でも、スライダーで遊ぶ
   }
-  G = { kind: 'solo', mode, base: daily ? 'score' : mode, param: daily ? 5 : FIXED[mode], round: 0, total: 0, cleared: 0, log: [], prev: null, autoT: 0, streak: 0, day, targets: daily ? dailyTargets(day) : null, input: daily ? dk : null };
-  if (rec && rec.log.length) {   // 途中でやめていたら、答えた分はそのまま、続きから
-    G.log = rec.log.map(l => ({ target: l.target, angle: l.angle, err: l.err }));
-    G.total = rec.total; G.round = G.log.length; G.cleared = G.log.length;
-    for (let i = G.log.length - 1; i >= 0 && G.log[i].err <= 1.5; i--) G.streak++;
-    toast(`${G.log.length}問目まで終わっています。続きからです`);
-  }
+  G = { kind: 'solo', mode, base: daily ? 'score' : mode, param: daily ? DAILY_ROUNDS : FIXED[mode], round: 0, total: 0, cleared: 0, log: [], prev: null, autoT: 0, streak: 0, day, targets: daily ? dailyTargets(day) : null, input: daily ? dk : null };
   if (mode === 'survival' || mode === 'nomiss') G.street = { scene: STREET_CLASSES[randInt(0, 2)], key: null, funnySeen: false };   // 道：背景は、ランダム
   track('play_start_' + mode);
   show('s-game'); nextSolo();
@@ -2150,16 +2143,16 @@ function nextSolo() {
 }
 function soloLocked() {
   const { target, angle, err } = R;
-  G.log.push({ target, angle, err }); G.total = r1(G.total + err);
+  G.log.push({ target, angle, err }); G.total = G.mode === 'daily' ? Math.round((G.total + R.err2) * 100) / 100 : r1(G.total + err);   // 本番は、小数2桁まで（順位の同点を減らす）
   G.streak = err <= 1.5 ? G.streak + 1 : 0;
   let over = false, done = false;
   if (G.base === 'survival') { if (G.total >= G.param) over = true; else G.cleared++; }
   else if (G.base === 'nomiss') { if (err > G.param) over = true; else G.cleared++; }
   else if (G.base === 'score') { G.cleared++; if (G.round >= G.param) done = true; }
   if (G.mode !== 'daily') G.input = (G.input === 'slider' || sliderMode()) ? 'slider' : 'sensor';   // ベストは、センサー部門とスライダー部門で、別に持つ
-  if (G.mode === 'daily') {   // 1問ごとに保存する。途中でやめても続きから。5問目で、今回の記録が確定する
+  if (G.mode === 'daily') {   // 1問勝負：答えたら、今回の記録が確定する
     const n = G.log.length, prevK = G.input;
-    // 入力方式：1問でもスライダーを使ったら、全体が「スライダー部門」。ぜんぶセンサーのときだけ「センサー部門」
+    // 入力方式：スライダーを使ったら「スライダー部門」。センサーで答えたときだけ「センサー部門」
     G.input = (G.input === 'slider' || sliderMode()) ? 'slider' : 'sensor';
     S.dailyRecs = S.dailyRecs || {}; S.dailyTops = S.dailyTops || {};
     if (prevK && prevK !== G.input && S.dailyRecs[prevK] && !S.dailyRecs[prevK].done) delete S.dailyRecs[prevK];   // 途中でセンサーが途切れて、スライダー部門に変わったとき
@@ -2186,7 +2179,7 @@ function soloLocked() {
       else if (now === top) promo = `<div class="sh-meta" style="color:#a3261f;font-weight:700">最高位！ ${esc(now)}</div>`;
     }
   }
-  else totalLine = `合計 ${fmt(G.total)}°`;
+  else totalLine = G.mode === 'daily' ? '' : `合計 ${fmt(G.total)}°`;
   sheet(`${stampHTML(err)}<div class="sh-verdict">${esc(verdict(err))}</div>
     <div class="sh-cmp"><div><small>お題</small><b>${sg(target)}°</b></div><div><small>あなた</small><b>${sgf(angle)}°</b></div><div><small>ズレ</small><b>${err.toFixed(1)}°</b></div></div>
     <div class="sh-meta">${dirTxt === 'ぴったり' ? 'ぴったり！' : target < 0 ? `お題より${dirTxt}でした` : `お題より${dirTxt}お辞儀でした`}</div>
@@ -2197,7 +2190,7 @@ function soloLocked() {
 }
 function summarySolo(over) {
   const m = G.mode, n = G.log.length;
-  const s = { mode: m, param: G.param, cleared: G.cleared, total: G.total, rounds: n, avg: n ? r1(G.total / n) : 0 };
+  const s = { mode: m, param: G.param, cleared: G.cleared, total: r1(G.total), rounds: n, avg: n ? r1(G.total / n) : 0 };   // 表示は小数1桁（順位に送るのは G.total）
   return s;
 }
 function finishSolo(over) {
@@ -2213,7 +2206,7 @@ function finishSolo(over) {
   let big = '', unit = '', title = '', sub = '';
   if (G.base === 'survival') { big = s.cleared; unit = 'ステージ突破'; title = titleN(s.cleared); sub = `誤差の合計 ${fmt(s.total)}° でHPが尽きました`; }
   else if (G.base === 'nomiss') { big = s.cleared; unit = '連続成功'; title = titleNomiss(s.cleared); sub = `ズレ ${fmt(s.param)}° 以内を ${s.cleared} 連続`; }
-  else if (G.base === 'score') { big = fmt(s.total); unit = '°'; title = titleAvg(s.avg); sub = `${G.mode === 'daily' ? G.day + '　' : ''}${s.param}回の誤差の合計（平均 ${fmt(s.avg)}°）`; }
+  else if (G.base === 'score') { big = fmt(s.total); unit = '°'; title = titleAvg(s.avg); sub = G.mode === 'daily' ? `${G.day}　一発勝負` : `${s.param}回の誤差の合計（平均 ${fmt(s.avg)}°）`; }
   else { big = fmt(s.avg); unit = '° 平均'; title = '練習終了'; sub = `${s.rounds}回　合計 ${fmt(s.total)}°`; }
   const logs = G.log.map((l, i) => `<div><span>${i + 1}. ${sgSlot(l.target)}°</span><span>${sgf(l.angle)}°（ズレ ${l.err.toFixed(1)}）${miniStamp(l.err)}</span></div>`).join('');
   const bigHTML = `<div class="fi-big">${big}${unit === '°' ? '<sup class="deg">°</sup>' : `<small>${unit}</small>`}</div>`;
@@ -2235,8 +2228,8 @@ function finishSolo(over) {
     $('#fi-body').innerHTML = `<div class="doc">
       <div class="doc-head"><b>謝罪道場</b><span>誠意評価書</span></div>
       <div class="doc-meta"><span>1日1回限り　本番謝罪　${esc(G.day)}</span><span>${esc(S.name)} 様</span></div>
-      <div class="doc-score"><small>誤差の合計</small>${bigHTML}<div class="doc-stamp">${stampOfAvg(s.avg).pre ? `<small>${esc(stampOfAvg(s.avg).pre)}</small>` : ''}<span>${esc(stampOfAvg(s.avg).label)}</span></div></div>
-      <div class="doc-line">総合評価<b>${esc(title)}</b><small>平均ズレ ${fmt(s.avg)}°</small></div>
+      <div class="doc-score"><small>誤差</small>${bigHTML}<div class="doc-stamp">${stampOfAvg(s.avg).pre ? `<small>${esc(stampOfAvg(s.avg).pre)}</small>` : ''}<span>${esc(stampOfAvg(s.avg).label)}</span></div></div>
+      <div class="doc-line">総合評価<b>${esc(title)}</b></div>
       <table class="doc-tbl"><thead><tr><th>お題の角度</th><th class="n">あなたの角度</th><th class="n">ズレ</th><th>判定</th></tr></thead><tbody>${rows || '<tr><td colspan="4">記録なし</td></tr>'}</tbody></table>
     </div>`;
   } else {
@@ -2250,7 +2243,7 @@ function finishSolo(over) {
   G.shareText = shareTextSolo(s, title, G.day);
   const lastL = G.log[G.log.length - 1] || {};
   G.card = { title: MODE[G.mode].name + (G.mode === 'daily' ? '　' + G.day : ''), big: String(big), unit, rank: title, sub, angle: lastL.angle != null ? lastL.angle : 45, target: lastL.target != null ? lastL.target : null, grade: G.base === 'nomiss' ? { pre: '', label: title } : stampOfAvg(s.avg), mood: moodOf(s.avg), dojo: G.mode !== 'daily',
-    label: { daily: '誤差の合計', score: '誤差の合計', survival: `HP ${s.param} で挑戦`, nomiss: `ズレ ${fmt(s.param)}° 以内で挑戦` }[G.mode] || '平均のズレ',
+    label: { daily: '誤差', score: '誤差の合計', survival: `HP ${s.param} で挑戦`, nomiss: `ズレ ${fmt(s.param)}° 以内で挑戦` }[G.mode] || '平均のズレ',
     street: G.street ? { scene: G.street.scene, key: FUNNY_KEYS.has(G.street.key) ? (G.street.lastNormal || 'oji') : G.street.key, mood: G.street.mood || 'angry' } : null };   // 共有画像には、ツッコミ枠（動物・泥棒など）は出さず、直前の普通の人を出す
   $('#fi-again').textContent = 'もう一度'; $('#fi-again').hidden = false; $('#fi-again').onclick = () => startSolo(G.mode);
   const daily = G.mode === 'daily';
@@ -2263,7 +2256,7 @@ function finishSolo(over) {
 }
 function shareTextSolo(s, title, day) {
   const name = MODE[s.mode].name;
-  if (s.mode === 'daily') return `【謝罪道場】本番謝罪 ${day}：誤差の合計 ${fmt(s.total)}°（平均 ${fmt(s.avg)}°）！称号：${title}`;
+  if (s.mode === 'daily') return `【謝罪道場】本番謝罪 ${day}：誤差 ${fmt(s.total)}°！称号：${title}`;
   if (s.mode === 'survival') return `【謝罪道場】${name}（HP${s.param}）で${s.cleared}ステージ突破！称号：${title}`;
   if (s.mode === 'nomiss') return `【謝罪道場】${name}（ズレ${fmt(s.param)}°以内）で${s.cleared}連続成功！称号：${title}`;
   if (s.mode === 'score') return `【謝罪道場】${name}（${s.param}回）の誤差の合計は${fmt(s.total)}°！称号：${title}`;
@@ -2613,10 +2606,8 @@ async function loadRank() {
   $$('#rk-kind button').forEach(b => b.classList.toggle('on', b.dataset.k === rankKind));
   $('#rk-kind-note').textContent = KIND_NOTE[rankKind];
   const rs = { sensor: dailyRec('sensor'), slider: dailyRec('slider') };
-  const prog = DKINDS.map(k => rs[k]).find(r => r && r.log.length && !r.done);
   const both = rs.sensor && rs.sensor.done && rs.slider && rs.slider.done, some = (rs.sensor && rs.sensor.done) || (rs.slider && rs.slider.done);
   if (DAILY_ONCE && both) { play.textContent = '今日は、両方の部門に挑戦ずみ（また明日！）'; play.disabled = true; }
-  else if (prog) { play.textContent = `続きから挑戦する（${KINDS[prog.kind]}・${prog.log.length} / 5 問 終わり）`; play.disabled = false; }
   else if (DAILY_ONCE && some) { play.textContent = 'もう一方の部門に挑戦する'; play.disabled = false; }
   else { play.textContent = DAILY_ONCE ? '本番に挑戦する（部門ごとに1回）' : '本番に挑戦する（いまは何回でもOK）'; play.disabled = false; }
   // この端末にある、見ている部門の、その日の記録（ベスト）
@@ -2657,7 +2648,7 @@ async function dailyAfter(g, s) {
     if (G !== g) return;
     if (list.length < RANK_MIN) { el.textContent = '全国のランキングは、準備中です（記録はこの端末に残っています）'; return; }   // 参加者が少ないあいだは、順位を出さない
     el.innerHTML = at >= 0 ? `今日のランキング（${kn}）：<b>${at + 1}</b>位 / ${list.length}人${list.length >= RANK_N ? '以上' : ''}` : `今日のランキング（${kn}）：${RANK_N}位圏外`;
-    if (at >= 0) { g.shareText = `【謝罪道場】本番謝罪 ${day}（${kn}）：${at + 1}位！誤差の合計 ${fmt(s.total)}°`; if (g.card) g.card.sub = `今日のランキング（${kn}）${at + 1}位 / ${list.length}人（${fmt(s.total)}°）`; }
+    if (at >= 0) { g.shareText = `【謝罪道場】本番謝罪 ${day}（${kn}）：${at + 1}位！誤差 ${fmt(s.total)}°`; if (g.card) g.card.sub = `今日のランキング（${kn}）${at + 1}位 / ${list.length}人（${fmt(s.total)}°）`; }
   } catch (e) { if (G === g) el.textContent = 'ランキングにつながりませんでした。後でランキング画面を開くと、送り直します'; }
 }
 $('#b-rank').onclick = () => openRank('today');
