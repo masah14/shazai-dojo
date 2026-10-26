@@ -910,6 +910,8 @@ if (LANG === 'en') {
     '前回の対戦を確認しています…': 'Checking your last match…',
     '前回の対戦の結果を反映しました': 'Result of your last match applied',
     'まだ対戦した人がいません。': 'Nobody has played yet.',
+    'ランキングは、準備中です。': 'The ranking is being prepared.',
+    'レートランキングは、準備中です。': 'The rating leaderboard is being prepared.',
     '最初の1人になろう！': 'Be the first!',
     'ランキングを読み込めませんでした': "Couldn't load the ranking",
     'この端末では、センサーが使えません。\nスライダー部門で遊ぶか、設定でセンサーを確認してください': 'Sensors are not available on this device.\nPlay the Slider Division, or check the sensor in Settings.',
@@ -982,6 +984,10 @@ if (LANG === 'en') {
     [/^最高位！ (.+)$/, (m, a) => `Top rank! ${T(a)}`],
     [/^お題より(浅い|深い)お辞儀でした$/, (m, a) => a === '浅い' ? 'Your bow was shallower than the target' : 'Your bow was deeper than the target'],
     [/^お題より(反りすぎ|反りが足りない)でした$/, (m, a) => a === '反りすぎ' ? 'You leaned back too far' : "You didn't lean back far enough"],
+    [/^(\d+)人以上が遊ぶと、表示されます。$/, (m, a) => `It will appear once ${a} or more players have played.`],
+    [/^(\d+)人以上が対戦すると、表示されます。$/, (m, a) => `It will appear once ${a} or more players have played.`],
+    [/^昨日は、参加者が(\d+)人に届かなかったため、ランキングはありません。$/, (m, a) => `Fewer than ${a} players played yesterday, so there is no ranking.`],
+    [/^ランキングは、準備中です（(\d+)人以上が遊ぶと、表示されます）$/, (m, a) => `The ranking is being prepared (it appears once ${a} or more players have played)`],
     [/^今日のランキング（(.+)）：$/, (m, a) => `Today's rank (${T(a)}): `],
     [/^位 \/ (\d+)人(以上)?$/, (m, a, b) => ` / ${a}${b ? '+' : ''} players`],
     [/^今日のランキング（(.+)）：(\d+)位圏外$/, (m, a, b) => `Today's rank (${T(a)}): outside the top ${b}`],
@@ -2556,6 +2562,7 @@ function myUid() {
   return S.uid;
 }
 const RANK_N = 300;   // 順位をつける人数（上位300人まで）
+const RANK_MIN = 5;   // 参加者が、この人数に届かないあいだは、ランキングを出さずに「準備中」にする
 // ランキングは、入力方式で分ける：'sensor'（スマホを傾ける）と 'slider'（画面のスライダー）。保存先も別
 const KINDS = { sensor: 'センサー部門', slider: 'スライダー部門' };
 const KIND_NOTE = { sensor: 'スマホを傾けて遊んだ人のランキングです。', slider: '画面のスライダーで遊んだ人（パソコンなど）のランキングです。' };
@@ -2627,7 +2634,11 @@ async function loadRank() {
     const kind = rankKind;
     const list = await rankFetch(day, kind), id = myUid(), at = list.findIndex(x => x.id === id);
     if (kind !== rankKind) return;   // 読み込み中に、別の部門に切り替えたとき
-    if (!list.length) { body.innerHTML = isToday ? '<div class="rk-msg">このランキングには、まだ誰もいません。<br>一番乗りになろう！</div>' : '<div class="rk-msg">昨日の記録は、ありません。</div>'; return; }
+    if (list.length < RANK_MIN) {   // 参加者が少ないあいだは、順位を出さない（準備中）
+      const mine = mineTotal != null ? `<br>この端末の${label}の記録：<b style="color:var(--gold)">${fmt(mineTotal)}°</b>` : '';
+      body.innerHTML = isToday ? `<div class="rk-msg">ランキングは、準備中です。<br>${RANK_MIN}人以上が遊ぶと、表示されます。${mine}</div>` : `<div class="rk-msg">昨日は、参加者が${RANK_MIN}人に届かなかったため、ランキングはありません。${mine}</div>`;
+      return;
+    }
     const rows = list.slice(0, 50).map((x, i) => rankRow(x, i, x.id === id));
     if (at >= 50) rows.push('<li class="rk-gap" style="background:none;padding:0;justify-content:center">・・・</li>', rankRow(list[at], at, true));
     const head = `<div class="rk-msg" style="padding:0 0 10px">${label}の参加者：${list.length}人${list.length >= RANK_N ? '以上' : ''}${at >= 0 ? `　あなた：<b style="color:var(--gold)">${at + 1}位</b>` : ''}</div>`;
@@ -2645,6 +2656,7 @@ async function dailyAfter(g, s) {
     const kind = g.input || 'slider', kn = KINDS[kind];
     const day = g.day, list = await rankFetch(day, kind), at = list.findIndex(x => x.id === myUid());
     if (G !== g) return;
+    if (list.length < RANK_MIN) { el.textContent = `ランキングは、準備中です（${RANK_MIN}人以上が遊ぶと、表示されます）`; return; }   // 参加者が少ないあいだは、順位を出さない
     el.innerHTML = at >= 0 ? `今日のランキング（${kn}）：<b>${at + 1}</b>位 / ${list.length}人${list.length >= RANK_N ? '以上' : ''}` : `今日のランキング（${kn}）：${RANK_N}位圏外`;
     if (at >= 0) { g.shareText = `【謝罪道場】本番謝罪 ${day}（${kn}）：${at + 1}位！誤差の合計 ${fmt(s.total)}°`; if (g.card) g.card.sub = `今日のランキング（${kn}）${at + 1}位 / ${list.length}人（${fmt(s.total)}°）`; }
   } catch (e) { if (G === g) el.textContent = 'ランキングにつながりませんでした。後でランキング画面を開くと、送り直します'; }
@@ -3074,7 +3086,7 @@ async function rmLoadBoard() {
     const snap = await FB.m.get(FB.m.query(dbRef(rkp('ratings')), FB.m.orderByChild('rating'), FB.m.limitToLast(60)));
     const arr = []; snap.forEach(c => { const v = c.val(); if (v && v.games > 0) arr.push({ id: c.key, name: c.key === FB.uid ? rmSafeName() : cleanName(String(v.name || '').slice(0, 10) || '名無し'), rating: +v.rating, wins: +v.wins || 0 }); });
     arr.sort((a, b) => b.rating - a.rating || b.wins - a.wins);
-    if (!arr.length) { box.innerHTML = '<div class="rk-msg">まだ対戦した人がいません。<br>最初の1人になろう！</div>'; return; }
+    if (arr.length < RANK_MIN) { box.innerHTML = `<div class="rk-msg">レートランキングは、準備中です。<br>${RANK_MIN}人以上が対戦すると、表示されます。</div>`; return; }   // 参加者が少ないあいだは、順位を出さない
     const me = FB.uid, at = arr.findIndex(x => x.id === me);
     const rows = arr.slice(0, 30).map((x, i) => `<li class="${x.id === me ? 'me' : ''}"><span class="n">${i + 1}</span><span class="nm">${esc(x.name)}</span><span class="tr">${tierOf(x.rating)}</span><span class="tt">${x.rating}</span></li>`);
     box.innerHTML = `<ul class="rank" style="padding:0;margin:0">${rows.join('')}</ul>` + (at >= 30 ? `<div class="rk-msg" style="padding:10px 0 0">あなたは ${at + 1}位です</div>` : '');
