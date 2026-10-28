@@ -1098,7 +1098,8 @@ if (GA_ON) {
 const track = (name, p) => { if (GA_ON) { try { gtag('event', name, p || {}); } catch (e) {} } };
 /* ---------- 星詠みデイリーからの案内（遊んだことを知らせる） ---------- */
 // 星詠みデイリー（hoshiyomi-daily.com）から来るリンクには、?hy=印 が付く。印は、このタブの中（sessionStorage）にだけ覚えて、URLからは消す。
-// 1回遊び終えて、結果が出たときに、1回だけ「遊んだ」と知らせる（送る内容は、印とゲームの名前だけ。個人を特定する情報は、送らない）。送ったら、印は消す。
+// 1回お辞儀して判定が出たときに（練習も含む）、1回だけ「遊んだ」と知らせる（送る内容は、印とゲームの名前だけ。個人を特定する情報は、送らない）。送ったら、印は消す。
+// 終わりの所（finishSolo など）でも呼んでいるが、印は最初に消えているので、2回目以降は何もしない。
 // 失敗しても、ゲームは止めない。印が無いときは、何もしない（今までどおり）。見た目は、変えない。
 const HY_KEY = 'hy';
 try {
@@ -2142,6 +2143,7 @@ function nextSolo() {
   beginRound(t, 0);
 }
 function soloLocked() {
+  hyPlayed();   // 1回お辞儀して判定が出たら、「遊んだ」と知らせる（練習も含む。終わりの所でも呼ぶが、印は1回で消える）
   const { target, angle, err } = R;
   G.log.push({ target, angle, err }); G.total = G.mode === 'daily' ? Math.round((G.total + R.err2) * 100) / 100 : r1(G.total + err);   // 本番は、小数2桁まで（順位の同点を減らす）
   G.streak = err <= 1.5 ? G.streak + 1 : 0;
@@ -2843,6 +2845,7 @@ function renderPlayers() {
   $('#g-players').innerHTML = Net.players.map(p => `<span class="${G.locked.includes(p.id) ? 'ok' : ''}">${G.locked.includes(p.id) ? '✓ ' : ''}${esc(p.name)}</span>`).join('');
 }
 function onlineLocked() {
+  hyPlayed();
   if (Net.isHost) hostOnLock('h', G.round, R.angle);
   else if (Net.hostConn && Net.hostConn.open) Net.hostConn.send({ t: 'lock', n: G.round, angle: R.angle });
 }
@@ -3224,6 +3227,7 @@ function rmPump() {
   }
 }
 function rmLocked() {
+  hyPlayed();
   const a = R.angle, e = R.err; RM.myLockAt = Date.now();
   if (RM.bot) { RM.data.r.me = { a, e, ts: Date.now() }; rmPump(); return; }
   const put = k => dbSet(rkp(`matches/${RM.mid}/r/${FB.uid}`), { a, e, ts: TSV() }).catch(() => { if (RM.ended) return; if (k < 3) setTimeout(() => put(k + 1), 800 * (k + 1)); else toast('送信に失敗しました。通信を確認してください'); });
